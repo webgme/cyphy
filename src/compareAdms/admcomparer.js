@@ -13,7 +13,7 @@ var compareAdms = function (adm1, adm2) {
 
     if (JSON.stringify(adm1, null, 2) === JSON.stringify(adm2, null, 2)) {
         result.success = true;
-        result.messages = "The given two adm designs are identical.";
+        result.messages.push("The given two adm designs are identical.");
     } else {
         // deep compare
         compareRootContainer(adm1.Design, adm2.Design);
@@ -49,10 +49,10 @@ var compareAdms = function (adm1, adm2) {
 
         if (JSON.stringify(containerArray1, null, 2) === JSON.stringify(containerArray2, null, 2)) {
             result.success = true;
-            result.message = "The designs have the same containers";
+            result.messages.push("The designs have the same containers");
         } else if (len1 !== len2) {
             result.success = false;
-            result.message = "The designs have different numbers of containers.";
+            result.messages.push("The designs have different numbers of containers.");
         } else {
             for (i = 0; i < len1; i += 1) {
                 // each cont is an object
@@ -83,10 +83,10 @@ var compareAdms = function (adm1, adm2) {
             ],
             FUNCTIONS = [
                 compareContainerArrays,
-                compareComponentInstanceArrays,
+                compareConnectorArrays,
                 compareProperties,
                 compareFormulas,
-                compareComponentInstances
+                compareComponentInstanceArrays
             ],
             i,
             type1 = container1[XSI_TYPE],
@@ -100,7 +100,7 @@ var compareAdms = function (adm1, adm2) {
 
         } else if (type1 !== type2 || name1 !== name2) {
             result.success = false;
-            result.message = "The designs have different containers: " + name1 + ", " + name2;
+            result.messages.push("The designs have different containers: " + name1 + ", " + name2);
         } else {
             // compare the container's child components
             for (i = 0; i < ELEMENTS.length; i += 1) {
@@ -114,7 +114,7 @@ var compareAdms = function (adm1, adm2) {
                     }
                 } else {
                     result.success = false;
-                    result.messages = "Two designs have different" + ELEMENTS[i] + "s.";
+                    result.messages.push("Two designs have different" + ELEMENTS[i] + "s.");
                 }
             }
         }
@@ -134,16 +134,16 @@ var compareAdms = function (adm1, adm2) {
 
         if (JSON.stringify(componentInstanceArray1, null, 2) === JSON.stringify(componentInstanceArray2, null, 2)) {
             result.success = true;
-            result.message = "The designs have the same containers";
+            result.messages.push("The designs have the same containers");
         } else if (len1 !== len2) {
             result.success = false;
-            result.message = "The designs have different numbers of ComponentInstances.";
+            result.messages.push("The designs have different numbers of ComponentInstances.");
         } else {
             for (i = 0; i < len1; i += 1) {
                 // each cont is an object
                 instance1 = componentInstanceArray1[i];
                 instance2 = componentInstanceArray2[i];
-                result = compareContainers(instance1, instance2);
+                result = compareComponentInstances(instance1, instance2);
                 if (!result.success) {
                     break;
                 }
@@ -163,8 +163,8 @@ var compareAdms = function (adm1, adm2) {
                         "ConnectorInstance"],
             i,
             FUNCTIONS = [
-                comparePrimitivePropertyInstances,
-                compareConnectorInstances
+                comparePrimitivePropertyInstanceArrays,
+                compareConnectorInstanceArrays
             ],
             name1 = componentInstance1[NAME],
             name2 = componentInstance2[NAME],
@@ -173,7 +173,10 @@ var compareAdms = function (adm1, adm2) {
 
         if (JSON.stringify(componentInstance1, null, 2) === JSON.stringify(componentInstance2, null, 2)) {
             result.success = true;
-            result.message = "The designs have the same containers";
+            result.messages.push("The designs have the same containers");
+        } else if (name1 !== name2 || id1 !== id2) {
+            result.success = false;
+            result.messages.push("The designs have different component instances.");
         } else {
             // compare the instance's child components
             for (i = 0; i < ELEMENTS.length; i += 1) {
@@ -193,12 +196,125 @@ var compareAdms = function (adm1, adm2) {
         }
     };
 
-    var compareProperties = function () {
+    var comparePrimitivePropertyInstanceArrays = function (primPropIns1, primPropIns2) {
+        var result = {
+                success: true,
+                messages: []
+            },
+            i;
+        if (primPropIns1.length !== primPropIns2) {
+            result.success = false;
+            result.messages.push("Two designs have different numbers of primitive property instances")
+        } else {
+            for (i = 0; i < primPropIns1.length; i += 1) {
+                result = comparePrimitivePropertyInstances(primPropIns1[i], primPropIns2[i]);
+                if (!result.success) {
+                    break;
+                }
+            }
+        }
+
+        return result;
+    };
+
+    var comparePrimitivePropertyInstances = function () {
+        var result = {
+                success: true,
+                messages: []
+            };
+
+        return result;
 
     };
 
-    var compareConnectors = function () {
+    var compareConnectorInstanceArrays = function (connectorInstanceArray1, connectorInstanceArray2) {
+        var result = {
+                success: true,
+                messages: []
+            },
+            i;
 
+        if (connectorInstanceArray1.length !== connectorInstanceArray2) {
+            result.success = false;
+            result.messages.push("The designs have different numbers of connector instances");
+        } else {
+            for (i = 0; i < connectorInstanceArray1.length; i += 1) {
+                result = compareConnectorInstances(connectorInstanceArray1[i], connectorInstanceArray2[i]);
+                if (!result.success) {
+                    break;
+                }
+            }
+        }
+
+
+        return result;
+    };
+
+    var compareConnectorInstances = function () {
+        var result = {
+            success: true,
+            messages: []
+        };
+
+        return result;
+
+    };
+
+    var compareProperties = function (property1, property2) {
+        var NAME = "@Name",
+            result = {
+                success: true,
+                messages: []
+            };
+
+        if (property1[NAME] !== property2[NAME]) {
+            result.success = false;
+            result.messages.push("Containers have different properties.");
+        }
+
+        return result;
+
+    };
+
+    var compareConnectorArrays = function (connectorArray1, connectorArray2) {
+        var result = {
+                success: true,
+                messages: []
+            },
+            i;
+
+        if (connectorArray1.length !== connectorArray2.length) {
+            result.success = false;
+            result.messages.push("Numbers of connector arrays are different");
+        } else {
+            for (i = 0; i < connectorArray1.length; i += 1) {
+                result = compareConnectors(connectorArray1[i], connectorArray2[i]);
+                if (!result.success) {
+                    break;
+                }
+            }
+        }
+
+        return result;
+    };
+
+    var compareConnectors = function (connector1, connector2) {
+        var NAME = "@Name",
+            ELEMENT = "Role",
+            result = {
+                success: true,
+                messages: []
+            };
+
+        if (connector1[NAME] !== connector2[NAME]) {
+            result.success = false;
+            result.messages.push("Connectors have different names");
+        } else {
+            if (connector1.hasOwnProperty(ELEMENT) === connector2.hasOwnProperty(ELEMENT)) {
+                result = compareRoleArrays(connector1[ELEMENT], connector2[ELEMENT]);
+            }
+        }
+        return result;
     };
 
     var compareFormulas = function () {
@@ -213,16 +329,33 @@ var compareAdms = function (adm1, adm2) {
 
     };
 
-    var comparePrimitivePropertyInstances = function () {
-
+    var compareRoleArrays = function (roleArray1, roleArray2) {
+        var i,
+            result = {
+                success: true,
+                messages: []
+            };
+        if (roleArray1.length !== roleArray2) {
+            result.success = false;
+            result.messages.push("Connectors have different numbers of roles");
+        } else {
+            for (i = 0; i < roleArray1.length; i += 1) {
+                result = compareRoles(roleArray1[i], roleArray2[i]);
+                if (!result.success) {
+                    break;
+                }
+            }
+        }
+        return result;
     };
 
-    var compareConnectorInstances = function () {
+    var compareRoles = function (role1, role2) {
+        var result = {
+                success: true,
+                messages: []
+            };
 
-    };
-
-    var compareRoles = function () {
-
+        return result;
     };
 
     var compareModelica = function () {
