@@ -1,5 +1,5 @@
 var adm2Object = require('./dependencies/adm2object.js');
-var adm1 = adm2Object('./src/compareAdms/samples/MyMassSpringDamper.adm');
+var adm1 = adm2Object('./src/compareAdms/samples/Wheel.adm');
 var adm2 = adm2Object('./src/compareAdms/samples/MyMassSpringDamper.adm');
 
 var compareAdms = function (adm1, adm2) {
@@ -16,7 +16,7 @@ var compareAdms = function (adm1, adm2) {
         result.messages.push("The given two adm designs are identical.");
     } else {
         // deep compare
-        compareRootContainer(adm1.Design, adm2.Design);
+        result = compareRootContainer(adm1.Design, adm2.Design);
     }
 
     return result;
@@ -27,7 +27,7 @@ var compareAdms = function (adm1, adm2) {
             root1 = design1.RootContainer,
             root2 = design2.RootContainer;
 
-        result = compareContainerArrays(root1, root2);
+        result = compareContainers(root1, root2);
         return result;
     };
 
@@ -73,7 +73,7 @@ var compareAdms = function (adm1, adm2) {
                 messages: []
             },
             XSI_TYPE = "@xsi:type",
-            NAME = "@name",
+            NAME = "@Name",
             ELEMENTS = [
                 "Container",
                 "Connector",
@@ -84,7 +84,7 @@ var compareAdms = function (adm1, adm2) {
             FUNCTIONS = [
                 compareContainerArrays,
                 compareConnectorArrays,
-                compareProperties,
+                comparePropertyArrays,
                 compareFormulas,
                 compareComponentInstanceArrays
             ],
@@ -100,7 +100,7 @@ var compareAdms = function (adm1, adm2) {
 
         } else if (type1 !== type2 || name1 !== name2) {
             result.success = false;
-            result.messages.push("The designs have different containers: " + name1 + ", " + name2);
+            result.messages.push("The designs have different containers: " + name1 + ", " + name2); // todo: need better messages
         } else {
             // compare the container's child components
             for (i = 0; i < ELEMENTS.length; i += 1) {
@@ -194,6 +194,7 @@ var compareAdms = function (adm1, adm2) {
                 }
             }
         }
+        return result;
     };
 
     var comparePrimitivePropertyInstanceArrays = function (primPropIns1, primPropIns2) {
@@ -260,6 +261,28 @@ var compareAdms = function (adm1, adm2) {
 
     };
 
+    var comparePropertyArrays = function (propArray1, propArray2) {
+        var i,
+            result = {
+                success: true,
+                messages: []
+            };
+
+        if (propArray1.length !== propArray2.length) {
+            result.success = false;
+            result.messages.push("Containers have different numbers of properties");
+        } else {
+            for (i = 0; i < propArray1.length; i += 1) {
+                result = compareProperties(propArray1[i], propArray2[i]);
+                if (!result.success) {
+                    break;
+                }
+            }
+        }
+
+        return result;
+    };
+
     var compareProperties = function (property1, property2) {
         var NAME = "@Name",
             result = {
@@ -273,7 +296,6 @@ var compareAdms = function (adm1, adm2) {
         }
 
         return result;
-
     };
 
     var compareConnectorArrays = function (connectorArray1, connectorArray2) {
@@ -335,7 +357,7 @@ var compareAdms = function (adm1, adm2) {
                 success: true,
                 messages: []
             };
-        if (roleArray1.length !== roleArray2) {
+        if (roleArray1.length !== roleArray2.length) {
             result.success = false;
             result.messages.push("Connectors have different numbers of roles");
         } else {
@@ -366,4 +388,4 @@ var compareAdms = function (adm1, adm2) {
 
     };
 
-compareAdms(adm1, adm2);
+console.log (compareAdms(adm1, adm2));
