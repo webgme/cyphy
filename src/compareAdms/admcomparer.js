@@ -41,6 +41,7 @@ var compareAdms = function (adm1, adm2) {
                 success: true,
                 messages: []
             },
+            NAME = "@Name",
             len1 = containerArray1.length,
             len2 = containerArray2.length,
             i,
@@ -54,6 +55,15 @@ var compareAdms = function (adm1, adm2) {
             result.success = false;
             result.messages.push("The designs have different numbers of containers.");
         } else {
+            // sort the arrays first
+            containerArray1.sort(function(a, b){
+                return a[NAME] > b[NAME];
+            });
+
+            containerArray2.sort(function(a, b){
+                return a[NAME] > b[NAME];
+            });
+
             for (i = 0; i < len1; i += 1) {
                 // each cont is an object
                 cont1 = containerArray1[i];
@@ -126,6 +136,7 @@ var compareAdms = function (adm1, adm2) {
                 success: true,
                 messages: []
             },
+            NAME = "@Name",
             len1 = componentInstanceArray1.length,
             len2 = componentInstanceArray2.length,
             i,
@@ -139,6 +150,16 @@ var compareAdms = function (adm1, adm2) {
             result.success = false;
             result.messages.push("The designs have different numbers of ComponentInstances.");
         } else {
+
+            // sort the arrays first
+            componentInstanceArray1.sort(function(a, b){
+                return a[NAME] > b[NAME];
+            });
+
+            componentInstanceArray2.sort(function(a, b){
+                return a[NAME] > b[NAME];
+            });
+
             for (i = 0; i < len1; i += 1) {
                 // each cont is an object
                 instance1 = componentInstanceArray1[i];
