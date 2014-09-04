@@ -85,7 +85,7 @@ var compareAdms = function (adm1, adm2) {
                 compareContainerArrays,
                 compareConnectorArrays,
                 comparePropertyArrays,
-                compareFormulas,
+                compareFormulaArrays,
                 compareComponentInstanceArrays
             ],
             i,
@@ -339,8 +339,54 @@ var compareAdms = function (adm1, adm2) {
         return result;
     };
 
-    var compareFormulas = function () {
+    var compareFormulaArrays = function (formulaArray1, formulaArray2) {
+        var TYPE = "@xsi:type",
+            TYPES = ["SimpleFormula",
+                     "CustomFormula"],
+            result = {
+                success: true,
+                messages: []
+            },
+            i,
+            formula1,
+            formula2,
+            simpleFormulaArray1 = [],
+            simpleFormulaArray2 = [],
+            customFormulaArray1 = [],
+            customFormulaArray2 = [];
 
+        if (formulaArray1.length !== formulaArray2.length) {
+            result.success = false;
+            result.messages.push("The containers have different numbers of formulas")
+        } else {
+            // todo: comparing formulas cannot use the sorter; for now just compare # of formulas
+            for (i = 0; i < formulaArray1.length; i += 1) {
+                formula1 = formulaArray1[i];
+                formula2 = formulaArray2[i];
+                if (formula1[TYPE] === TYPES[1]) {
+                    simpleFormulaArray1.push(formula1);
+                } else if (formula1[TYPE] === TYPES[2]) {
+                    customFormulaArray1.push(formula1);
+                }
+
+                if (formula2[TYPE] === TYPES[1]) {
+                    simpleFormulaArray2.push(formula2);
+                } else if (formula2[TYPE] === TYPES[2]) {
+                    customFormulaArray2.push(formula2);
+                }
+
+                // todo: if of neither formula type, warning?
+            }
+
+            if (simpleFormulaArray1.length !== simpleFormulaArray2.length) {
+                result.success = false;
+                result.messages.push("The containers have different numbers of simple formulas");
+            } else if (customFormulaArray1.length !== customFormulaArray2.length) {
+                result.success = false;
+                result.messages.push("The containers have different numbers of custom formulas");
+            }
+        }
+        return result;
     };
 
     var compareSimpleFormulas = function () {
