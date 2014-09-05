@@ -1,16 +1,21 @@
 var adm2Object = require('./dependencies/adm2object.js');
-var adm1 = adm2Object('./src/compareAdms/samples/Wheel.adm');
-var adm2 = adm2Object('./src/compareAdms/samples/MyMassSpringDamper.adm');
+var adm1 = adm2Object('./samples/d1.adm');
+var adm2 = adm2Object('./samples/d2.adm');
 
 var compareAdms = function (adm1, adm2) {
     var result = {
-            success: true,
-            messages: []
-        };
+        success: true,
+        messages: []
+    };
+    /* TODO: messages: {
+                info: [],
+                warn: [],
+                error: []
+            }
+    */
     //TODO: here goes the code
-//    console.log(JSON.stringify(adm1, null, 2));
-//    console.log(JSON.stringify(adm2, null, 2));
 
+    //TODO: remove the indentation (will save some resources).
     if (JSON.stringify(adm1, null, 2) === JSON.stringify(adm2, null, 2)) {
         result.success = true;
         result.messages.push("The given two adm designs are identical.");
@@ -25,9 +30,15 @@ var compareAdms = function (adm1, adm2) {
     var compareRootContainer = function (design1, design2) {
         var result,
             root1 = design1.RootContainer,
-            root2 = design2.RootContainer;
+            root2 = design2.RootContainer,
+            rootNode = {
+                name: 'RootContainer',
+                type: 'Container',
+                children: [],
+                parent: null
+            };
 
-        result = compareContainers(root1, root2);
+        result = compareContainers(root1, root2, rootNode);
         return result;
     };
 
@@ -36,7 +47,7 @@ var compareAdms = function (adm1, adm2) {
      * @param containerArray1 - an array of containers
      * @param containerArray2 - a second array of containers
      */
-    var compareContainerArrays = function (containerArray1, containerArray2) {
+    var compareContainerArrays = function (containerArray1, containerArray2, parent) {
         var result = {
                 success: true,
                 messages: []
@@ -53,7 +64,7 @@ var compareAdms = function (adm1, adm2) {
             result.messages.push("The designs have the same containers");
         } else if (len1 !== len2) {
             result.success = false;
-            result.messages.push("The designs have different numbers of containers.");
+            result.messages.push(formatParentTree(parent) + " have different numbers of containers.");
         } else {
             // sort the arrays first
             containerArray1.sort(function(a, b){
@@ -68,7 +79,13 @@ var compareAdms = function (adm1, adm2) {
                 // each cont is an object
                 cont1 = containerArray1[i];
                 cont2 = containerArray2[i];
-                result = compareContainers(cont1, cont2);
+                node = {
+                    name: cont1[NAME],
+                    type: 'Container',
+                    parent: parent,
+                    children: []
+                };
+                result = compareContainers(cont1, cont2, parent);
                 if (!result.success) {
                     break;
                 }
@@ -77,7 +94,7 @@ var compareAdms = function (adm1, adm2) {
         return result;
     };
 
-    var compareContainers = function (container1, container2) {
+    var compareContainers = function (container1, container2, parent) {
         var result = {
                 success: true,
                 messages: []
@@ -102,22 +119,31 @@ var compareAdms = function (adm1, adm2) {
             type1 = container1[XSI_TYPE],
             type2 = container2[XSI_TYPE],
             name1 = container1[NAME],
-            name2 = container2[NAME];
+            name2 = container2[NAME],
+            node = {
+                name: name1,
+                type: 'Container',
+                children: [],
+                parent: parent
+            };
 
+        parent.children.push(node);
         if (JSON.stringify(container1, null, 2) === JSON.stringify(container2, null, 2)) {
             result.success = true;
-            // todo: add a message here to show success
-
-        } else if (type1 !== type2 || name1 !== name2) {
+        // TODO: split into two else ifs . Easier to explain what didn't match..
+        } else if (name1 !== name2) {
             result.success = false;
-            result.messages.push("The designs have different containers: " + name1 + ", " + name2); // todo: need better messages
+            result.messages.push(formatParentTree(parent) + "Name of Containers does not match: " + name1 + ", " + name2);
+        } else if (type1 !== type2) {
+            result.success = false;
+            result.messages.push(formatParentTree(parent) + "Type of Containers " + name1 + " does not match: " + type1 + ", " + type1);
         } else {
             // compare the container's child components
             for (i = 0; i < ELEMENTS.length; i += 1) {
                 if (container1.hasOwnProperty(ELEMENTS[i]) === container2.hasOwnProperty(ELEMENTS[i])) {
                     if (container1.hasOwnProperty(ELEMENTS[i])) {
                         // deep compare elements of each container's child element
-                        result = FUNCTIONS[i](container1[ELEMENTS[i]], container2[ELEMENTS[i]]);
+                        result = FUNCTIONS[i](container1[ELEMENTS[i]], container2[ELEMENTS[i]], node);
                         if (!result.success) {
                             break;
                         }
@@ -453,6 +479,25 @@ var compareAdms = function (adm1, adm2) {
 
     var compareCAD = function () {
 
+    };
+
+    var formatParentTree = function (node) {
+        var messages = [],
+            parentNode,
+            result = '',
+            len;
+        messages.push(node.type + ' "' + node.name + '"');
+        parentNode = node.parent;
+        while (parentNode) {
+            messages.push('"' + parentNode.name + '"[' + parentNode.type + ']');
+            parentNode = parentNode.parent;
+        }
+        len = messages.length - 1;
+        while (len--) {
+            result += messages[len] + '->';
+        }
+
+        return result + ': ';
     };
 
 console.log (compareAdms(adm1, adm2));
