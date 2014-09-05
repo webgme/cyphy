@@ -1,6 +1,6 @@
 var adm2Object = require('./dependencies/adm2object.js');
-var adm1 = adm2Object('./samples/d1.adm');
-var adm2 = adm2Object('./samples/d2.adm');
+var adm1 = adm2Object('./src/compareAdms/samples/d1.adm');
+var adm2 = adm2Object('./src/compareAdms/samples/d2.adm');
 
 var compareAdms = function (adm1, adm2) {
     var result = {
@@ -13,10 +13,8 @@ var compareAdms = function (adm1, adm2) {
                 error: []
             }
     */
-    //TODO: here goes the code
 
-    //TODO: remove the indentation (will save some resources).
-    if (JSON.stringify(adm1, null, 2) === JSON.stringify(adm2, null, 2)) {
+    if (JSON.stringify(adm1, null) === JSON.stringify(adm2, null)) {
         result.success = true;
         result.messages.push("The given two adm designs are identical.");
     } else {
@@ -56,10 +54,11 @@ var compareAdms = function (adm1, adm2) {
             len1 = containerArray1.length,
             len2 = containerArray2.length,
             i,
-            cont1,
-            cont2;
+            container1,
+            container2,
+            node;
 
-        if (JSON.stringify(containerArray1, null, 2) === JSON.stringify(containerArray2, null, 2)) {
+        if (JSON.stringify(containerArray1, null) === JSON.stringify(containerArray2, null)) {
             result.success = true;
             result.messages.push("The designs have the same containers");
         } else if (len1 !== len2) {
@@ -77,15 +76,15 @@ var compareAdms = function (adm1, adm2) {
 
             for (i = 0; i < len1; i += 1) {
                 // each cont is an object
-                cont1 = containerArray1[i];
-                cont2 = containerArray2[i];
+                container1 = containerArray1[i];
+                container2 = containerArray2[i];
                 node = {
-                    name: cont1[NAME],
+                    name: container1[NAME],
                     type: 'Container',
                     parent: parent,
                     children: []
                 };
-                result = compareContainers(cont1, cont2, parent);
+                result = compareContainers(container1, container2, node);
                 if (!result.success) {
                     break;
                 }
@@ -128,15 +127,15 @@ var compareAdms = function (adm1, adm2) {
             };
 
         parent.children.push(node);
-        if (JSON.stringify(container1, null, 2) === JSON.stringify(container2, null, 2)) {
+        if (JSON.stringify(container1, null) === JSON.stringify(container2, null)) {
             result.success = true;
-        // TODO: split into two else ifs . Easier to explain what didn't match..
+
         } else if (name1 !== name2) {
             result.success = false;
             result.messages.push(formatParentTree(parent) + "Name of Containers does not match: " + name1 + ", " + name2);
         } else if (type1 !== type2) {
             result.success = false;
-            result.messages.push(formatParentTree(parent) + "Type of Containers " + name1 + " does not match: " + type1 + ", " + type1);
+            result.messages.push(formatParentTree(parent) + "Type of Containers " + name1 + " does not match: " + type1 + ", " + type2);
         } else {
             // compare the container's child components
             for (i = 0; i < ELEMENTS.length; i += 1) {
@@ -169,7 +168,7 @@ var compareAdms = function (adm1, adm2) {
             instance1,
             instance2;
 
-        if (JSON.stringify(componentInstanceArray1, null, 2) === JSON.stringify(componentInstanceArray2, null, 2)) {
+        if (JSON.stringify(componentInstanceArray1, null) === JSON.stringify(componentInstanceArray2, null)) {
             result.success = true;
             result.messages.push("The designs have the same containers");
         } else if (len1 !== len2) {
@@ -218,7 +217,7 @@ var compareAdms = function (adm1, adm2) {
             id1 = componentInstance1[COMPONENT_ID],
             id2 = componentInstance2[COMPONENT_ID];
 
-        if (JSON.stringify(componentInstance1, null, 2) === JSON.stringify(componentInstance2, null, 2)) {
+        if (JSON.stringify(componentInstance1, null) === JSON.stringify(componentInstance2, null)) {
             result.success = true;
             result.messages.push("The designs have the same containers");
         } else if (name1 !== name2 || id1 !== id2) {
@@ -486,6 +485,7 @@ var compareAdms = function (adm1, adm2) {
             parentNode,
             result = '',
             len;
+
         messages.push(node.type + ' "' + node.name + '"');
         parentNode = node.parent;
         while (parentNode) {
