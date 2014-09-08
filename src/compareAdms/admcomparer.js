@@ -237,6 +237,7 @@ var compareAdms = function (adm1, adm2) {
             result.success = false;
             result.messages.push(formatParentTree(parent) + "ComponentID of ComponentInstance does not match: " + id1 + ", " + id2);
         } else {
+
             // compare the instance's child components
             for (i = 0; i < ELEMENTS.length; i += 1) {
                 if (componentInstance1.hasOwnProperty(ELEMENTS[i]) === componentInstance2.hasOwnProperty(ELEMENTS[i])) {
@@ -269,6 +270,15 @@ var compareAdms = function (adm1, adm2) {
             result.success = false;
             result.messages.push(formatParentTree(parent) + "Number of PrimitivePropertyInstances does not match: " + primPropIns1.length + ", " + primPropIns2.length);
         } else {
+            // sort the arrays first
+            primPropIns1.sort(function(a, b){
+                return a[NAME] > b[NAME];
+            });
+
+            primPropIns2.sort(function(a, b){
+                return a[NAME] > b[NAME];
+            });
+
             for (i = 0; i < primPropIns1.length; i += 1) {
                 node = {
                     name: primPropIns1[i][NAME],
@@ -309,6 +319,14 @@ var compareAdms = function (adm1, adm2) {
             result.success = false;
             result.messages.push(formatParentTree(parent) + "Number of ConnectorInstances does not match: " + connectorInstanceArray1.length + ", " + connectorInstanceArray2.length);
         } else {
+            // sort the arrays first
+            connectorInstanceArray1.sort(function(a, b){
+                return a[NAME] > b[NAME];
+            });
+
+            connectorInstanceArray2.sort(function(a, b){
+                return a[NAME] > b[NAME];
+            });
             for (i = 0; i < connectorInstanceArray1.length; i += 1) {
                 node = {
                     name: connectorInstanceArray1[i][NAME],
@@ -350,6 +368,15 @@ var compareAdms = function (adm1, adm2) {
             result.success = false;
             result.messages.push(formatParentTree(parent) + "Number of Properties does not match: " + propArray1.length + ", " + propArray2.length);
         } else {
+            // sort the arrays first
+            propArray1.sort(function(a, b){
+                return a[NAME] > b[NAME];
+            });
+
+            propArray2.sort(function(a, b){
+                return a[NAME] > b[NAME];
+            });
+
             for (i = 0; i < propArray1.length; i += 1) {
                 node = {
                     name: propArray1[i][NAME],
@@ -395,6 +422,15 @@ var compareAdms = function (adm1, adm2) {
             result.success = false;
             result.messages.push(formatParentTree(parent) + "Number of Connectors does not match: " + connectorArray1.length + ", " + connectorArray2.length);
         } else {
+            // sort the arrays first
+            connectorArray1.sort(function(a, b){
+                return a[NAME] > b[NAME];
+            });
+
+            connectorArray2.sort(function(a, b){
+                return a[NAME] > b[NAME];
+            });
+
             for (i = 0; i < connectorArray1.length; i += 1) {
                 node = {
                     name: connectorArray1[i][NAME],
@@ -499,6 +535,7 @@ var compareAdms = function (adm1, adm2) {
 
     var compareRoleArrays = function (roleArray1, roleArray2, parent) {
         var NAME = "@Name",
+            CLASS = "@Class",
             i,
             result = {
                 success: true,
@@ -509,6 +546,16 @@ var compareAdms = function (adm1, adm2) {
             result.success = false;
             result.messages.push(formatParentTree(parent) + "Number of Roles does not match: " + roleArray1.length + ", " + roleArray2.length);
         } else {
+            // sort the arrays first
+            roleArray1.sort(function(a, b){
+                return a[NAME] > b[NAME];
+            });
+
+            roleArray2.sort(function(a, b){
+                return a[NAME] > b[NAME];
+            });
+            // todo: may need to compare all pairs of roles instead of sorting ************
+
             for (i = 0; i < roleArray1.length; i += 1) {
                 node = {
                     name: roleArray1[i][NAME],
@@ -526,20 +573,52 @@ var compareAdms = function (adm1, adm2) {
     };
 
     var compareRoles = function (role1, role2, parent) {
-        var result = {
+        var TYPE = "@xmlns:q",
+            CLASS = "@Class",
+            XSI_TYPE = "@xsi:type",
+            MODELICA = "modelica",
+            CAD = "cad",
+            result = {
                 success: true,
                 messages: []
-            };
+            },
+            key,
+            type1,
+            type2;
+
+        for (key in role1) {
+            if (role1.hasOwnProperty(key)) {
+                if (key.indexOf(TYPE) === 0) {
+                    type1 = key;
+                    break;
+                }
+            }
+        }
+        for (key in role2) {
+            if (role2.hasOwnProperty(key)) {
+                if (key.indexOf(TYPE) === 0) {
+                    type2 = key;
+                    break;
+                }
+            }
+        }
+
+        if (role1[type1] !== role2[type2]) {
+            result.success = false;
+            result.messages.push(formatParentTree(parent) + "Type of Role does not match: " + role1[type1] + ", " + role2[type2]);
+        } else if (role1[type1] === MODELICA) {
+            if (role1[CLASS] !== role2[CLASS]) {
+                result.success = false;
+                result.messages.push(formatParentTree(parent) + "Modelica Class of Role does not match: " + role1[CLASS] + ", " + role2[CLASS]);
+            }
+        } else if (role1[type1] === CAD) {
+            if (role1[XSI_TYPE] !== role2[XSI_TYPE]) {
+                result.success = false;
+                result.messages.push(formatParentTree(parent) + "CAD Class of Role does not match: " + role1[XSI_TYPE] + ", " + role2[XSI_TYPE]);
+            }
+        }
 
         return result;
-    };
-
-    var compareModelica = function () {
-
-    };
-
-    var compareCAD = function () {
-
     };
 
     var formatParentTree = function (node) {
