@@ -213,7 +213,7 @@ var compareAdms = function (adm1, adm2) {
                 success: true,
                 messages: []
             },
-            COMPONENT_ID = "@ComponentID",
+            COMPONENT_ID = "@IDInComponentModel",
             NAME = "@Name",
             ELEMENTS = ["PrimitivePropertyInstance",
                         "ConnectorInstance"],
@@ -235,7 +235,7 @@ var compareAdms = function (adm1, adm2) {
             result.messages.push(formatParentTree(parent) + "Name of ComponentInstance does not match: " + name1 + ", " + name2);
         } else if (id1 !== id2) {
             result.success = false;
-            result.messages.push(formatParentTree(parent) + "ComponentID of ComponentInstance does not match: " + id1 + ", " + id2);
+            result.messages.push(formatParentTree(parent) + "IDInComponentModel does not match: " + id1 + ", " + id2);
         } else {
 
             // compare the instance's child components
@@ -345,14 +345,19 @@ var compareAdms = function (adm1, adm2) {
         return result;
     };
 
-    var compareConnectorInstances = function (ConnectorInstance1, ConnectorInstance2, parent) {
-        var result = {
-            success: true,
-            messages: []
-        };
+    var compareConnectorInstances = function (connectorInstance1, connectorInstance2, parent) {
+        var NAME = "@Name",
+            result = {
+                success: true,
+                messages: []
+            };
+
+        if (connectorInstance1[NAME] !== connectorInstance2[NAME]) {
+            result.success = false;
+            result.messages.push(formatParentTree(parent), "Name of connector instances does not match: " + connectorInstance1[NAME] + ", " + connectorInstance2[NAME]);
+        }
 
         return result;
-
     };
 
     var comparePropertyArrays = function (propArray1, propArray2, parent) {
@@ -640,5 +645,52 @@ var compareAdms = function (adm1, adm2) {
 
         return result + ': ';
     };
+
+//    /**
+//     * When two component arrays have equal length, compare each pair of components
+//     * success - if component array length number of pairs match
+//     * fail - otherwise
+//     * @param name
+//     * @param type
+//     * @param parent
+//     * @param componentArray1
+//     * @param componentArray2
+//     * @param nextFunc
+//     */
+//    var compareAllPairsInArrays = function (name, type, parent, componentArray1, componentArray2, nextFunc) {
+//        var TARGET = componentArray1.length,
+//            counter = 0,
+//            i,
+//            j,
+//            node,
+//            result = {
+//                success: true,
+//                messages: []
+//            };
+//
+//        for (i = 0; i < componentArray1.length; i += 1) {
+//            for (j = 0; j < componentArray1.length; j += 1) {
+//                node = {
+//                    name: name,
+//                    type: type,
+//                    parent: parent,
+//                    children: []
+//                };
+//                result = nextFunc(componentArray1[i], componentArray2[j], node);
+//                if (result.success) {
+//                    ++counter;
+//                    componentArray1.splice(i, 1);
+//                    componentArray2.splice(j, 1);
+//                    --i;
+//                    --j;
+//                }
+//            }
+//        }
+//
+//        if (counter !== TARGET) {
+//            result.success = false;
+//
+//        }
+//    };
 
 console.log (compareAdms(adm1, adm2));
