@@ -4,6 +4,11 @@ var adm2 = adm2Object('./src/compareAdms/samples/d2.adm');
 //var adm1 = adm2Object('./src/compareAdms/samples/MyMassSpringDamper.adm');
 //var adm2 = adm2Object('./src/compareAdms/samples/Wheel.adm');
 
+var formulas = [];
+var primitiveProperyInstances = [];
+var properties = [];
+var component_map = {};
+
 var compareAdms = function (adm1, adm2) {
     var result = {
         success: true,
@@ -113,7 +118,6 @@ var compareAdms = function (adm1, adm2) {
                 compareContainerArrays,
                 compareConnectorArrays,
                 comparePropertyArrays,
-                compareFormulaArrays,
                 compareComponentInstanceArrays
             ],
             i,
@@ -215,11 +219,12 @@ var compareAdms = function (adm1, adm2) {
             },
             COMPONENT_ID = "@IDInComponentModel",
             NAME = "@Name",
-            ELEMENTS = ["PrimitivePropertyInstance",
+            PRIM_PROP_INS = "PrimitivePropertyInstance",
+            ELEMENTS = [// "PrimitivePropertyInstance",
                         "ConnectorInstance"],
             i,
             FUNCTIONS = [
-                comparePrimitivePropertyInstanceArrays,
+//                comparePrimitivePropertyInstanceArrays,   // todo: is this checked here or in valueflow checks?
                 compareConnectorInstanceArrays
             ],
             name1 = componentInstance1[NAME],
@@ -255,7 +260,40 @@ var compareAdms = function (adm1, adm2) {
                 }
             }
         }
+
+
+        if (componentInstance1.hasOwnProperty(PRIM_PROP_INS) === componentInstance2.hasOwnProperty(PRIM_PROP_INS)) {
+            if (componentInstance1.hasOwnProperty(PRIM_PROP_INS)) {
+                scanPrimitivePropertyInstanceArrays(componentInstance1[PRIM_PROP_INS], componentInstance2[PRIM_PROP_INS]);
+            }
+        }
         return result;
+    };
+
+    /**
+     * store all primitive property instances in a LUT
+     * @param array1
+     * @param array2
+     */
+    var scanPrimitivePropertyInstanceArrays = function (array1, array2) {
+        var ID = "@IDinComponentModel",
+            TYPE = "PrimitivePropertyInstance",
+            VALUE = "Value",
+            VALUE_ID = "@ID",
+            VALUE_SRC = "@ValueSource",
+            EXP = "ValueExpression",
+            XSI_TYPE = "@xsi:type",
+            DERIVED = "DerivedValue",
+            i,
+            key,
+            value = {},
+            obj;
+        for (i = 0; i < array1.length; i += 1) {
+            obj = array1[i];
+            key = obj[ID];
+            value.type = TYPE;
+            value.obj = extractValues(value);
+        }
     };
 
     var comparePrimitivePropertyInstanceArrays = function (primPropIns1, primPropIns2, parent) {
@@ -397,6 +435,10 @@ var compareAdms = function (adm1, adm2) {
         }
 
         return result;
+    };
+
+    var scanPropertyArrays = function (array1, array2) {
+
     };
 
     var compareProperties = function (property1, property2, parent) {
@@ -624,6 +666,45 @@ var compareAdms = function (adm1, adm2) {
         }
 
         return result;
+    };
+
+    var compareFixedValues = function (fixedValue1, fixedValue2, parent) {
+
+    };
+
+    var extractValues = function (valueObject) {
+        var // define attribute names
+            ID = "@ID",
+            TYPE = "@xsi:type",
+            // define element tag names
+            SOURCE = "ValueSource",
+            EXP = "ValueExpression",
+            VALUE = "Value",
+            ASSIGNED = "AssignedValue",
+            // define default const values
+            DERIVED = "DerivedValue",
+            FIXED = "FixedValue",
+            PARAMETRIC = "ParametricValue",
+            retObj = {};
+
+        retObj.id = valueObject[ID];
+        if (valueObject.hasOwnProperty(EXP)) {
+            if (TYPE.indexOf(DERIVED) > -1) {
+                retObj.valueSource = valueObject[EXP][SOURCE];
+                // todo: start tracking valueflow... ************************************************
+            } else if (TYPE.indexOf(FIXED) > -1) {
+                // todo: if tag doesn't exist, print error message
+                retObj.fixedValue = valueObject[EXP][VALUE];
+            } else if (TYPE.indexOf(PARAMETRIC) > -1) {
+                // todo: if tag doesn't exist, print error message
+
+                // todo: retObj.assignedValue = valueObject[EXP][ASSIGNED];
+                // todo: this might be recursive..........
+
+            }
+        }
+
+        return retObj;
     };
 
     var formatParentTree = function (node) {
