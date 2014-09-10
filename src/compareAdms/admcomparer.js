@@ -1,13 +1,15 @@
 var adm2Object = require('./dependencies/adm2object.js');
-var adm1 = adm2Object('./src/compareAdms/samples/d1.adm');
-var adm2 = adm2Object('./src/compareAdms/samples/d2.adm');
-//var adm1 = adm2Object('./src/compareAdms/samples/MyMassSpringDamper.adm');
-//var adm2 = adm2Object('./src/compareAdms/samples/Wheel.adm');
+//var adm1 = adm2Object('./src/compareAdms/samples/d1.adm');
+//var adm2 = adm2Object('./src/compareAdms/samples/d2.adm');
+var adm1 = adm2Object('./src/compareAdms/samples/MyMassSpringDamper.adm');
+var adm2 = adm2Object('./src/compareAdms/samples/Wheel.adm');
 
 var formulas = [];
 var primitiveProperyInstances = [];
 var properties = [];
 var component_map = {};
+var connectorComposition1_map = {};
+var connectorComposition2_map = {};
 
 var compareAdms = function (adm1, adm2) {
     var result = {
@@ -111,7 +113,7 @@ var compareAdms = function (adm1, adm2) {
                 "Container",
                 "Connector",
                 "Property",
-                "Formula",
+//                "Formula",
                 "ComponentInstance"
             ],
             FUNCTIONS = [
@@ -344,8 +346,16 @@ var compareAdms = function (adm1, adm2) {
 
     };
 
+    /**
+     * Compare sorted pairs of connector instances
+     * fail - if lengths do not match
+     * @param connectorInstanceArray1
+     * @param connectorInstanceArray2
+     * @param parent
+     * @returns {{success: boolean, messages: Array}}
+     */
     var compareConnectorInstanceArrays = function (connectorInstanceArray1, connectorInstanceArray2, parent) {
-        var NAME = "@Name",
+        var ID = "@IDinComponentModel",
             result = {
                 success: true,
                 messages: []
@@ -359,15 +369,18 @@ var compareAdms = function (adm1, adm2) {
         } else {
             // sort the arrays first
             connectorInstanceArray1.sort(function(a, b){
-                return a[NAME] > b[NAME];
+                return a[ID] > b[ID];
             });
 
             connectorInstanceArray2.sort(function(a, b){
-                return a[NAME] > b[NAME];
+                return a[ID] > b[ID];
             });
+
+            // todo: can sorting be done here? ***************************************
+
             for (i = 0; i < connectorInstanceArray1.length; i += 1) {
                 node = {
-                    name: connectorInstanceArray1[i][NAME],
+                    name: null,
                     type: 'ConnectorInstance',
                     parent: parent,
                     children: []
@@ -379,11 +392,19 @@ var compareAdms = function (adm1, adm2) {
             }
         }
 
-
         return result;
     };
 
-    var compareConnectorInstances = function (connectorInstance1, connectorInstance2, parent) {
+    /**
+     * Comparing two connector instances
+     * fail - if IDinComponentModel does not match
+     * otherwise - store each ID, ConnectorComposition, and parent name in ComponentInstance
+     * @param connectorInstance1
+     * @param connectorInstance2
+     * @param node: stores current node information
+     * @returns {{success: boolean, messages: Array}}
+     */
+    var compareConnectorInstances = function (connectorInstance1, connectorInstance2, node) {
         var ID = "@IDinComponentModel",
             result = {
                 success: true,
@@ -392,10 +413,30 @@ var compareAdms = function (adm1, adm2) {
 
         if (connectorInstance1[ID] !== connectorInstance2[ID]) {
             result.success = false;
-            result.messages.push(formatParentTree(parent), "IDinComponentModel of ConnectorInstances does not match: " + connectorInstance1[ID] + ", " + connectorInstance2[ID]);
+            result.messages.push(formatParentTree(node), "IDinComponentModel of ConnectorInstances does not match: " + connectorInstance1[ID] + ", " + connectorInstance2[ID]);
+        } else {
+            storeConnectorCompositionInfo(connectorInstance1, node.parent.name, node, connectorComposition1_map);
+            storeConnectorCompositionInfo(connectorInstance2, node.parent.name, node, connectorComposition2_map);
         }
 
         return result;
+    };
+
+    var storeConnectorCompositionInfo = function (element, parentName, parent, map) {
+        var CONNECTOR_COMPOSITION = "@ConnectorComposition",
+            ID = "@ID",
+            compositionId,
+            id,
+            value;
+
+        compositionId = element[CONNECTOR_COMPOSITION];
+        id = element[ID];
+        value = {
+            compositionId: compositionId,
+            parentName: parentName,
+            parent: parent
+        };
+        map[id] = value;
     };
 
     var comparePropertyArrays = function (propArray1, propArray2, parent) {
@@ -508,6 +549,8 @@ var compareAdms = function (adm1, adm2) {
             result.success = false;
             result.messages.push(formatParentTree(parent) + "Name of Connectors does not match: " + connector1[NAME] + ", " + connector2[NAME]);
         } else {
+            storeConnectorCompositionInfo(connector1, connector1[NAME], parent, connectorComposition1_map);
+            storeConnectorCompositionInfo(connector2, connector2[NAME], parent, connectorComposition2_map);
             if (connector1.hasOwnProperty(ELEMENT) === connector2.hasOwnProperty(ELEMENT)) { // todo: use a for loop maybe
                 node = {
                     name: connector1[NAME],
@@ -670,6 +713,76 @@ var compareAdms = function (adm1, adm2) {
 
     var compareFixedValues = function (fixedValue1, fixedValue2, parent) {
 
+    };
+
+    var compareConnectorComposition = function () {
+        var result = {
+                success: true,
+                messages: []
+            },
+            keys1 = Object.keys(connectorComposition1_map),
+            keys2 = Object.keys(connectorComposition2_map),
+            i,
+            j,
+            key1,
+            val1,
+            parentName1,
+            refId1,
+            id1Index,
+            key2,
+            val2,
+            parentName2,
+            refId2,
+            id2Index,
+            connector1_compIds = [],
+            connector2_compIds = [];
+
+        // todo: assume keys lengths equal
+        for (i = 0; i < keys1.length; i += 1) {
+            // each pair must have matching parentName
+            key1 = keys1[i];
+            val1 = connectorComposition1_map[key1];
+            connector1_compIds = val1.compositionId.split(" ");
+
+            key2 = keys2[i];
+            val2 = connectorComposition2_map[key2];
+            connector2_compIds = val2.compositionId.split(" ");
+
+//            if (parentName1 !== parentName2) {
+//                result.success = false;
+//                result.messages.push(formatParentTree());
+//            }
+
+            // todo: assume parent names equal
+//            if (parentName1 === parentName2) {
+            // todo: number of connector compositions has to match
+            if (connector1_compIds.length !== connector2_compIds.length) {
+                result.success = false;
+                result.messages.push(formatParentTree(val1.parent) + "Number of id references in ConnectorComposition does not match");
+                break;
+            } else {
+                // todo: sort the compositionID arrays
+                for (j = 0; j < connector1_compIds.length; j += 1) {
+                    refId1 = connector1_compIds[j];
+                    refId2 = connector2_compIds[j];
+                    id1Index = keys1.indexOf(refId1);
+                    id2Index = keys2.indexOf(refId2);
+
+                    parentName1 = connector1_compIds[keys1[id1Index]].parentName;
+                    parentName2 = connector2_compIds[keys1[id2Index]].parentName;
+
+                    if (parentName1 !== parentName2) {
+                        result.success = false;
+                        result.messages.push(formatParentTree(connector1_compIds[keys1[id1Index]].parent) + "Reference in ConnectorComposition does not match");
+                        break;
+                    }
+                }
+            }
+
+
+//            }
+
+        }
     };
 
     var extractValues = function (valueObject) {
