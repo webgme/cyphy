@@ -217,7 +217,7 @@ var compareAdms = function (adm1, adm2) {
                 success: true,
                 messages: []
             },
-            COMPONENT_ID = "@IDInComponentModel",
+            COMPONENT_ID = "@ComponentID",
             NAME = "@Name",
             PRIM_PROP_INS = "PrimitivePropertyInstance",
             ELEMENTS = [// "PrimitivePropertyInstance",
@@ -240,7 +240,7 @@ var compareAdms = function (adm1, adm2) {
             result.messages.push(formatParentTree(parent) + "Name of ComponentInstance does not match: " + name1 + ", " + name2);
         } else if (id1 !== id2) {
             result.success = false;
-            result.messages.push(formatParentTree(parent) + "IDInComponentModel does not match: " + id1 + ", " + id2);
+            result.messages.push(formatParentTree(parent) + "ComponentID of ComponentInstance does not match: " + id1 + ", " + id2);
         } else {
 
             // compare the instance's child components
@@ -384,15 +384,15 @@ var compareAdms = function (adm1, adm2) {
     };
 
     var compareConnectorInstances = function (connectorInstance1, connectorInstance2, parent) {
-        var NAME = "@Name",
+        var ID = "@IDinComponentModel",
             result = {
                 success: true,
                 messages: []
             };
 
-        if (connectorInstance1[NAME] !== connectorInstance2[NAME]) {
+        if (connectorInstance1[ID] !== connectorInstance2[ID]) {
             result.success = false;
-            result.messages.push(formatParentTree(parent), "Name of connector instances does not match: " + connectorInstance1[NAME] + ", " + connectorInstance2[NAME]);
+            result.messages.push(formatParentTree(parent), "IDinComponentModel of ConnectorInstances does not match: " + connectorInstance1[ID] + ", " + connectorInstance2[ID]);
         }
 
         return result;
