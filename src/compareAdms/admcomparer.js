@@ -7,7 +7,6 @@ var adm2 = adm2Object('./src/compareAdms/samples/Wheel.adm');
 var formulas = [];
 var primitiveProperyInstances = [];
 var properties = [];
-var component_map = {};
 var connectorComposition1_map = {};
 var connectorComposition2_map = {};
 
@@ -27,8 +26,18 @@ var compareAdms = function (adm1, adm2) {
         result.success = true;
         result.messages.push("The given two adm designs are identical.");
     } else {
-        // deep compare
+        // 1. first pass -- check all basic components for any differences
         result = compareRootContainer(adm1.Design, adm2.Design);
+
+        // 2. second pass -- check all ConnectorCompositions (connections, referenced via IDs) in the design for any discrepancies
+        if (result.success) {
+            result = compareConnectorComposition();
+
+            // 3. third pass -- check against all value flows (formulas, properties)
+            if (result.success) {
+
+            }
+        }
     }
 
     return result;
@@ -46,9 +55,6 @@ var compareAdms = function (adm1, adm2) {
             };
 
         result = compareContainers(root1, root2, rootNode);
-        if (result.success) {
-            result = compareConnectorComposition();
-        }
         return result;
     };
 
@@ -56,6 +62,7 @@ var compareAdms = function (adm1, adm2) {
      * Compare two container Arrays by making a recursive call that compares individual container object
      * @param containerArray1 - an array of containers
      * @param containerArray2 - a second array of containers
+     * @param parent
      */
     var compareContainerArrays = function (containerArray1, containerArray2, parent) {
         var result = {
@@ -69,11 +76,6 @@ var compareAdms = function (adm1, adm2) {
             container1,
             container2,
             node;
-
-//        if (JSON.stringify(containerArray1, null) === JSON.stringify(containerArray2, null)) {
-//            result.success = true;
-//            result.messages.push("The designs have the same containers");
-//        } else
 
         if (len1 !== len2) {
             result.success = false;
@@ -116,16 +118,15 @@ var compareAdms = function (adm1, adm2) {
             NAME = "@Name",
             ELEMENTS = [
                 "Container",
+                "ComponentInstance",
                 "Connector",
-                "Property",
-//                "Formula",
-                "ComponentInstance"
+                "Property"
             ],
             FUNCTIONS = [
                 compareContainerArrays,
+                compareComponentInstanceArrays,
                 compareConnectorArrays,
-                comparePropertyArrays,
-                compareComponentInstanceArrays
+                comparePropertyArrays
             ],
             i,
             type1 = container1[XSI_TYPE],
@@ -140,10 +141,6 @@ var compareAdms = function (adm1, adm2) {
             };
 
         parent.children.push(node);
-//        if (JSON.stringify(container1, null) === JSON.stringify(container2, null)) {
-//            result.success = true;
-//
-//        } else
 
         if (name1 !== name2) {
             result.success = false;
@@ -184,11 +181,6 @@ var compareAdms = function (adm1, adm2) {
             instance1,
             instance2,
             node;
-
-//        if (JSON.stringify(componentInstanceArray1, null) === JSON.stringify(componentInstanceArray2, null)) {
-//            result.success = true;
-//            result.messages.push("The designs have the same containers");
-//        } else
 
         if (len1 !== len2) {
             result.success = false;
@@ -243,11 +235,6 @@ var compareAdms = function (adm1, adm2) {
             id1 = componentInstance1[COMPONENT_ID],
             id2 = componentInstance2[COMPONENT_ID];
 
-//        if (JSON.stringify(componentInstance1, null) === JSON.stringify(componentInstance2, null)) {
-//            result.success = true;
-//            result.messages.push("The containers have the same ComponentInstances");
-//        } else
-
         if (name1 !== name2) {
             result.success = false;
             result.messages.push(formatParentTree(parent) + "Name of ComponentInstance does not match: " + name1 + ", " + name2);
@@ -280,231 +267,6 @@ var compareAdms = function (adm1, adm2) {
                 scanPrimitivePropertyInstanceArrays(componentInstance1[PRIM_PROP_INS], componentInstance2[PRIM_PROP_INS]);
             }
         }
-        return result;
-    };
-
-    /**
-     * store all primitive property instances in a LUT
-     * @param array1
-     * @param array2
-     */
-    var scanPrimitivePropertyInstanceArrays = function (array1, array2) {
-        var ID = "@IDinComponentModel",
-            TYPE = "PrimitivePropertyInstance",
-            VALUE = "Value",
-            VALUE_ID = "@ID",
-            VALUE_SRC = "@ValueSource",
-            EXP = "ValueExpression",
-            XSI_TYPE = "@xsi:type",
-            DERIVED = "DerivedValue",
-            i,
-            key,
-            value = {},
-            obj;
-        for (i = 0; i < array1.length; i += 1) {
-            obj = array1[i];
-            key = obj[ID];
-            value.type = TYPE;
-            value.obj = extractValues(value);
-        }
-    };
-
-    var comparePrimitivePropertyInstanceArrays = function (primPropIns1, primPropIns2, parent) {
-        var NAME = "@Name",
-            result = {
-                success: true,
-                messages: []
-            },
-            i,
-            node;
-        if (primPropIns1.length !== primPropIns2.length) {
-            result.success = false;
-            result.messages.push(formatParentTree(parent) + "Number of PrimitivePropertyInstances does not match: " + primPropIns1.length + ", " + primPropIns2.length);
-        } else {
-            // sort the arrays first
-            primPropIns1.sort(function(a, b){
-                return a[NAME] > b[NAME];
-            });
-
-            primPropIns2.sort(function(a, b){
-                return a[NAME] > b[NAME];
-            });
-
-            for (i = 0; i < primPropIns1.length; i += 1) {
-                node = {
-                    name: primPropIns1[i][NAME],
-                    type: 'PrimitivePropertyInstance',
-                    parent: parent,
-                    children: []
-                };
-                result = comparePrimitivePropertyInstances(primPropIns1[i], primPropIns2[i], node);
-                if (!result.success) {
-                    break;
-                }
-            }
-        }
-
-        return result;
-    };
-
-    var comparePrimitivePropertyInstances = function (PrimtivePropertyInstance1, PrimtivePropertyInstance2, parent) {
-        var result = {
-                success: true,
-                messages: []
-            };
-
-        return result;
-
-    };
-
-    /**
-     * Compare sorted pairs of connector instances
-     * fail - if lengths do not match
-     * @param connectorInstanceArray1
-     * @param connectorInstanceArray2
-     * @param parent
-     * @returns {{success: boolean, messages: Array}}
-     */
-    var compareConnectorInstanceArrays = function (connectorInstanceArray1, connectorInstanceArray2, parent) {
-        var ID = "@IDinComponentModel",
-            result = {
-                success: true,
-                messages: []
-            },
-            i,
-            node;
-
-        if (connectorInstanceArray1.length !== connectorInstanceArray2.length) {
-            result.success = false;
-            result.messages.push(formatParentTree(parent) + "Number of ConnectorInstances does not match: " + connectorInstanceArray1.length + ", " + connectorInstanceArray2.length);
-        } else {
-            // sort the arrays first
-            connectorInstanceArray1.sort(function(a, b){
-                return a[ID] > b[ID];
-            });
-
-            connectorInstanceArray2.sort(function(a, b){
-                return a[ID] > b[ID];
-            });
-
-            // todo: can sorting be done here? ***************************************
-
-            for (i = 0; i < connectorInstanceArray1.length; i += 1) {
-                node = {
-                    name: "",
-                    type: 'ConnectorInstance',
-                    parent: parent,
-                    children: []
-                };
-                result = compareConnectorInstances(connectorInstanceArray1[i], connectorInstanceArray2[i], node);
-                if (!result.success) {
-                    break;
-                }
-            }
-        }
-
-        return result;
-    };
-
-    /**
-     * Comparing two connector instances
-     * fail - if IDinComponentModel does not match
-     * otherwise - store each ID, ConnectorComposition, and parent name in ComponentInstance
-     * @param connectorInstance1
-     * @param connectorInstance2
-     * @param node: stores current node information
-     * @returns {{success: boolean, messages: Array}}
-     */
-    var compareConnectorInstances = function (connectorInstance1, connectorInstance2, node) {
-        var ID = "@IDinComponentModel",
-            result = {
-                success: true,
-                messages: []
-            };
-
-        if (connectorInstance1[ID] !== connectorInstance2[ID]) {
-            result.success = false;
-            result.messages.push(formatParentTree(node), "IDinComponentModel of ConnectorInstances does not match: " + connectorInstance1[ID] + ", " + connectorInstance2[ID]);
-        } else {
-            storeConnectorCompositionInfo(connectorInstance1, node.parent.name, node, connectorComposition1_map);
-            storeConnectorCompositionInfo(connectorInstance2, node.parent.name, node, connectorComposition2_map);
-        }
-
-        return result;
-    };
-
-    var storeConnectorCompositionInfo = function (element, parentName, parent, map) {
-        var CONNECTOR_COMPOSITION = "@ConnectorComposition",
-            ID = "@ID",
-            compositionId,
-            id,
-            value;
-
-        compositionId = element[CONNECTOR_COMPOSITION];
-        id = element[ID];
-        value = {
-            compositionId: compositionId,
-            parentName: parentName,
-            parent: parent
-        };
-        map[id] = value;
-    };
-
-    var comparePropertyArrays = function (propArray1, propArray2, parent) {
-        var NAME = "@Name",
-            i,
-            result = {
-                success: true,
-                messages: []
-            },
-            node;
-
-        if (propArray1.length !== propArray2.length) {
-            result.success = false;
-            result.messages.push(formatParentTree(parent) + "Number of Properties does not match: " + propArray1.length + ", " + propArray2.length);
-        } else {
-            // sort the arrays first
-            propArray1.sort(function(a, b){
-                return a[NAME] > b[NAME];
-            });
-
-            propArray2.sort(function(a, b){
-                return a[NAME] > b[NAME];
-            });
-
-            for (i = 0; i < propArray1.length; i += 1) {
-                node = {
-                    name: propArray1[i][NAME],
-                    type: 'Property',
-                    parent: parent,
-                    children: []
-                };
-                result = compareProperties(propArray1[i], propArray2[i], node);
-                if (!result.success) {
-                    break;
-                }
-            }
-        }
-
-        return result;
-    };
-
-    var scanPropertyArrays = function (array1, array2) {
-
-    };
-
-    var compareProperties = function (property1, property2, parent) {
-        var NAME = "@Name",
-            result = {
-                success: true,
-                messages: []
-            };
-
-        if (property1[NAME] !== property2[NAME]) {
-            result.success = false;
-            result.messages.push(formatParentTree(parent) + "Name of Property does not match: " + property1[NAME] + ", " + property2[NAME]);
-        }
-
         return result;
     };
 
@@ -575,68 +337,8 @@ var compareAdms = function (adm1, adm2) {
         return result;
     };
 
-    var compareFormulaArrays = function (formulaArray1, formulaArray2, parent) {
-        var NAME = "@Name",
-            TYPE = "@xsi:type",
-            TYPES = ["SimpleFormula",
-                     "CustomFormula"],
-            result = {
-                success: true,
-                messages: []
-            },
-            i,
-            formula1,
-            formula2,
-            simpleFormulaArray1 = [],
-            simpleFormulaArray2 = [],
-            customFormulaArray1 = [],
-            customFormulaArray2 = [];
-
-        if (formulaArray1.length !== formulaArray2.length) {
-            result.success = false;
-            result.messages.push(formatParentTree(parent) + "Number of Formulas does not match: " + formulaArray1.length + ", " + formulaArray2.length);
-        } else {
-            // todo: comparing formulas cannot use the sorter; for now just compare # of formulas
-            for (i = 0; i < formulaArray1.length; i += 1) {
-                formula1 = formulaArray1[i];
-                formula2 = formulaArray2[i];
-                if (formula1[TYPE] === TYPES[1]) {
-                    simpleFormulaArray1.push(formula1);
-                } else if (formula1[TYPE] === TYPES[2]) {
-                    customFormulaArray1.push(formula1);
-                }
-
-                if (formula2[TYPE] === TYPES[1]) {
-                    simpleFormulaArray2.push(formula2);
-                } else if (formula2[TYPE] === TYPES[2]) {
-                    customFormulaArray2.push(formula2);
-                }
-
-                // todo: if of neither formula type, warning?
-            }
-
-            if (simpleFormulaArray1.length !== simpleFormulaArray2.length) {
-                result.success = false;
-                result.messages.push(formatParentTree(parent) + "Number of SimpleFormulas does not match: " + simpleFormulaArray1.length + ", " + simpleFormulaArray2.length);
-            } else if (customFormulaArray1.length !== customFormulaArray2.length) {
-                result.success = false;
-                result.messages.push(formatParentTree(parent) + "Number of CustomFormulas does not match: " + customFormulaArray1.length + ", " + customFormulaArray2.length);
-            }
-        }
-        return result;
-    };
-
-    var compareSimpleFormulas = function () {
-
-    };
-
-    var compareCustomFormulas = function () {
-
-    };
-
     var compareRoleArrays = function (roleArray1, roleArray2, parent) {
         var NAME = "@Name",
-            CLASS = "@Class",
             i,
             result = {
                 success: true,
@@ -722,10 +424,241 @@ var compareAdms = function (adm1, adm2) {
         return result;
     };
 
-    var compareFixedValues = function (fixedValue1, fixedValue2, parent) {
+    var comparePropertyArrays = function (propArray1, propArray2, parent) {
+        var NAME = "@Name",
+            i,
+            result = {
+                success: true,
+                messages: []
+            },
+            node;
+
+        if (propArray1.length !== propArray2.length) {
+            result.success = false;
+            result.messages.push(formatParentTree(parent) + "Number of Properties does not match: " + propArray1.length + ", " + propArray2.length);
+        } else {
+            // sort the arrays first
+            propArray1.sort(function(a, b){
+                return a[NAME] > b[NAME];
+            });
+
+            propArray2.sort(function(a, b){
+                return a[NAME] > b[NAME];
+            });
+
+            for (i = 0; i < propArray1.length; i += 1) {
+                node = {
+                    name: propArray1[i][NAME],
+                    type: 'Property',
+                    parent: parent,
+                    children: []
+                };
+                result = compareProperties(propArray1[i], propArray2[i], node);
+                if (!result.success) {
+                    break;
+                }
+            }
+        }
+
+        return result;
+    };
+
+    var compareProperties = function (property1, property2, parent) {
+        var NAME = "@Name",
+            result = {
+                success: true,
+                messages: []
+            };
+
+        if (property1[NAME] !== property2[NAME]) {
+            result.success = false;
+            result.messages.push(formatParentTree(parent) + "Name of Property does not match: " + property1[NAME] + ", " + property2[NAME]);
+        }
+
+        return result;
+    };
+
+    /**
+     * Compare sorted pairs of connector instances
+     * fail - if lengths do not match
+     * @param connectorInstanceArray1
+     * @param connectorInstanceArray2
+     * @param parent
+     * @returns {{success: boolean, messages: Array}}
+     */
+    var compareConnectorInstanceArrays = function (connectorInstanceArray1, connectorInstanceArray2, parent) {
+        var ID = "@IDinComponentModel",
+            result = {
+                success: true,
+                messages: []
+            },
+            i,
+            node;
+
+        if (connectorInstanceArray1.length !== connectorInstanceArray2.length) {
+            result.success = false;
+            result.messages.push(formatParentTree(parent) + "Number of ConnectorInstances does not match: " + connectorInstanceArray1.length + ", " + connectorInstanceArray2.length);
+        } else {
+            // sort the arrays first
+            connectorInstanceArray1.sort(function(a, b){
+                return a[ID] > b[ID];
+            });
+
+            connectorInstanceArray2.sort(function(a, b){
+                return a[ID] > b[ID];
+            });
+
+            // todo: can sorting be done here? ***************************************
+
+            for (i = 0; i < connectorInstanceArray1.length; i += 1) {
+                node = {
+                    name: "",
+                    type: 'ConnectorInstance',
+                    parent: parent,
+                    children: []
+                };
+                result = compareConnectorInstances(connectorInstanceArray1[i], connectorInstanceArray2[i], node);
+                if (!result.success) {
+                    break;
+                }
+            }
+        }
+
+        return result;
+    };
+
+    /**
+     * Comparing two connector instances
+     * fail - if IDinComponentModel does not match
+     * otherwise - store each ID, ConnectorComposition, and parent name in ComponentInstance
+     * @param connectorInstance1
+     * @param connectorInstance2
+     * @param node: stores current node information
+     * @returns {{success: boolean, messages: Array}}
+     */
+    var compareConnectorInstances = function (connectorInstance1, connectorInstance2, node) {
+        var ID = "@IDinComponentModel",
+            result = {
+                success: true,
+                messages: []
+            };
+
+        if (connectorInstance1[ID] !== connectorInstance2[ID]) {
+            result.success = false;
+            result.messages.push(formatParentTree(node), "IDinComponentModel of ConnectorInstances does not match: " + connectorInstance1[ID] + ", " + connectorInstance2[ID]);
+        } else {
+            storeConnectorCompositionInfo(connectorInstance1, node.parent.name, node, connectorComposition1_map);
+            storeConnectorCompositionInfo(connectorInstance2, node.parent.name, node, connectorComposition2_map);
+        }
+
+        return result;
+    };
+
+    /**
+     * Store information associated with each connector composition; used in second pass checking
+     * @param element - the root element containing ConnectorComposition
+     * @param parentName - name of the parent node containing ConnectorComposition
+     * @param parent - parent node, either a Connector or a ConnectorInstance
+     * @param map - which map to store such info to
+     */
+    var storeConnectorCompositionInfo = function (element, parentName, parent, map) {
+        var CONNECTOR_COMPOSITION = "@ConnectorComposition",
+            ID = "@ID",
+            compositionId,
+            id,
+            value;
+
+        compositionId = element[CONNECTOR_COMPOSITION];
+        id = element[ID];
+        value = {
+            compositionId: compositionId,
+            parentName: parentName,
+            parent: parent
+        };
+        map[id] = value;
+    };
+
+
+
+    /**
+     * store all primitive property instances in a LUT
+     * @param array1
+     * @param array2
+     */
+    var scanPrimitivePropertyInstanceArrays = function (array1, array2) {
+        var ID = "@IDinComponentModel",
+            TYPE = "PrimitivePropertyInstance",
+            VALUE = "Value",
+            VALUE_ID = "@ID",
+            VALUE_SRC = "@ValueSource",
+            EXP = "ValueExpression",
+            XSI_TYPE = "@xsi:type",
+            DERIVED = "DerivedValue",
+            i,
+            key,
+            value = {},
+            obj;
+        for (i = 0; i < array1.length; i += 1) {
+            obj = array1[i];
+            key = obj[ID];
+            value.type = TYPE;
+            value.obj = extractValues(value);
+        }
+    };
+
+    var comparePrimitivePropertyInstanceArrays = function (primPropIns1, primPropIns2, parent) {
+        var NAME = "@Name",
+            result = {
+                success: true,
+                messages: []
+            },
+            i,
+            node;
+        if (primPropIns1.length !== primPropIns2.length) {
+            result.success = false;
+            result.messages.push(formatParentTree(parent) + "Number of PrimitivePropertyInstances does not match: " + primPropIns1.length + ", " + primPropIns2.length);
+        } else {
+            // sort the arrays first
+            primPropIns1.sort(function(a, b){
+                return a[NAME] > b[NAME];
+            });
+
+            primPropIns2.sort(function(a, b){
+                return a[NAME] > b[NAME];
+            });
+
+            for (i = 0; i < primPropIns1.length; i += 1) {
+                node = {
+                    name: primPropIns1[i][NAME],
+                    type: 'PrimitivePropertyInstance',
+                    parent: parent,
+                    children: []
+                };
+                result = comparePrimitivePropertyInstances(primPropIns1[i], primPropIns2[i], node);
+                if (!result.success) {
+                    break;
+                }
+            }
+        }
+
+        return result;
+    };
+
+    var comparePrimitivePropertyInstances = function (PrimtivePropertyInstance1, PrimtivePropertyInstance2, parent) {
+        var result = {
+                success: true,
+                messages: []
+            };
+
+        return result;
 
     };
 
+
+    /**
+     * After all elements have been scanned the first time for any discrepancies, compare each pair of ConnectorCompositions stored in the LUT
+     * @returns {{success: boolean, messages: Array}}
+     */
     var compareConnectorComposition = function () {
         var result = {
                 success: true,
@@ -748,7 +681,6 @@ var compareAdms = function (adm1, adm2) {
             connector1_compIds = [],
             connector2_compIds = [];
 
-        // todo: assume keys lengths equal
         for (i = 0; i < keys1.length; i += 1) {
             // each pair must have matching parentName
             key1 = keys1[i];
@@ -759,20 +691,16 @@ var compareAdms = function (adm1, adm2) {
             val2 = connectorComposition2_map[key2];
             connector2_compIds = val2.compositionId.split(" ");
 
-//            if (parentName1 !== parentName2) {
-//                result.success = false;
-//                result.messages.push(formatParentTree());
-//            }
-
-            // todo: assume parent names equal
-//            if (parentName1 === parentName2) {
-            // todo: number of connector compositions has to match
+            // number of ids in ConnectorComposition needs to match
             if (connector1_compIds.length !== connector2_compIds.length) {
                 result.success = false;
                 result.messages.push(formatParentTree(val1.parent) + "Number of id references in ConnectorComposition does not match");
                 break;
             } else {
-                // todo: sort the compositionID arrays
+                // sort the compositionID arrays
+                connector1_compIds.sort();
+                connector2_compIds.sort();
+
                 for (j = 0; j < connector1_compIds.length; j += 1) {
                     refId1 = connector1_compIds[j];
                     refId2 = connector2_compIds[j];
@@ -801,8 +729,6 @@ var compareAdms = function (adm1, adm2) {
                     }
                 }
             }
-
-//            }
         }
 
         return result;
@@ -843,6 +769,12 @@ var compareAdms = function (adm1, adm2) {
         return retObj;
     };
 
+
+    /**
+     * A helper function to log the trace of branching during checks
+     * @param node
+     * @returns {string}
+     */
     var formatParentTree = function (node) {
         var messages = [],
             parentNode,
@@ -862,6 +794,58 @@ var compareAdms = function (adm1, adm2) {
 
         return result + ': ';
     };
+
+
+//    var compareFormulaArrays = function (formulaArray1, formulaArray2, parent) {
+//        var NAME = "@Name",
+//            TYPE = "@xsi:type",
+//            TYPES = ["SimpleFormula",
+//                     "CustomFormula"],
+//            result = {
+//                success: true,
+//                messages: []
+//            },
+//            i,
+//            formula1,
+//            formula2,
+//            simpleFormulaArray1 = [],
+//            simpleFormulaArray2 = [],
+//            customFormulaArray1 = [],
+//            customFormulaArray2 = [];
+//
+//        if (formulaArray1.length !== formulaArray2.length) {
+//            result.success = false;
+//            result.messages.push(formatParentTree(parent) + "Number of Formulas does not match: " + formulaArray1.length + ", " + formulaArray2.length);
+//        } else {
+//            // todo: comparing formulas cannot use the sorter; for now just compare # of formulas
+//            for (i = 0; i < formulaArray1.length; i += 1) {
+//                formula1 = formulaArray1[i];
+//                formula2 = formulaArray2[i];
+//                if (formula1[TYPE] === TYPES[1]) {
+//                    simpleFormulaArray1.push(formula1);
+//                } else if (formula1[TYPE] === TYPES[2]) {
+//                    customFormulaArray1.push(formula1);
+//                }
+//
+//                if (formula2[TYPE] === TYPES[1]) {
+//                    simpleFormulaArray2.push(formula2);
+//                } else if (formula2[TYPE] === TYPES[2]) {
+//                    customFormulaArray2.push(formula2);
+//                }
+//
+//                // todo: if of neither formula type, warning?
+//            }
+//
+//            if (simpleFormulaArray1.length !== simpleFormulaArray2.length) {
+//                result.success = false;
+//                result.messages.push(formatParentTree(parent) + "Number of SimpleFormulas does not match: " + simpleFormulaArray1.length + ", " + simpleFormulaArray2.length);
+//            } else if (customFormulaArray1.length !== customFormulaArray2.length) {
+//                result.success = false;
+//                result.messages.push(formatParentTree(parent) + "Number of CustomFormulas does not match: " + customFormulaArray1.length + ", " + customFormulaArray2.length);
+//            }
+//        }
+//        return result;
+//    };
 
 //    /**
 //     * When two component arrays have equal length, compare each pair of components
