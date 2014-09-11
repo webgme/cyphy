@@ -1,14 +1,16 @@
 var adm2Object = require('./dependencies/adm2object.js');
-//var adm1 = adm2Object('./src/compareAdms/samples/dhs.adm');
-//var adm2 = adm2Object('./src/compareAdms/samples/dhsID.adm');
-var adm1 = adm2Object('./src/compareAdms/samples/MyMassSpringDamper.adm');
-var adm2 = adm2Object('./src/compareAdms/samples/Wheel.adm');
+var adm1 = adm2Object('./src/compareAdms/samples/d1.adm');
+var adm2 = adm2Object('./src/compareAdms/samples/d2.adm');
+//var adm1 = adm2Object('./src/compareAdms/samples/MyMassSpringDamper.adm');
+//var adm2 = adm2Object('./src/compareAdms/samples/Wheel.adm');
 
 var formulas = [];
 var primitiveProperyInstances = [];
 var properties = [];
 var connectorComposition1_map = {};
 var connectorComposition2_map = {};
+var valueFlow1_map = {};
+var valueFlow2_map = {};
 
 var compareAdms = function (adm1, adm2) {
     var result = {
@@ -223,11 +225,11 @@ var compareAdms = function (adm1, adm2) {
             COMPONENT_ID = "@ComponentID",
             NAME = "@Name",
             PRIM_PROP_INS = "PrimitivePropertyInstance",
-            ELEMENTS = [// "PrimitivePropertyInstance",
+            ELEMENTS = ["PrimitivePropertyInstance",
                         "ConnectorInstance"],
             i,
             FUNCTIONS = [
-//                comparePrimitivePropertyInstanceArrays,   // todo: is this checked here or in valueflow checks?
+                comparePrimitivePropertyInstanceArrays,   // todo: is this checked here or in valueflow checks?
                 compareConnectorInstanceArrays
             ],
             name1 = componentInstance1[NAME],
@@ -578,6 +580,10 @@ var compareAdms = function (adm1, adm2) {
         map[id] = value;
     };
 
+    var storeValueFlowInfo = function (element, parentName, parent, map) {
+
+    };
+
 
 
     /**
@@ -644,11 +650,21 @@ var compareAdms = function (adm1, adm2) {
         return result;
     };
 
-    var comparePrimitivePropertyInstances = function (PrimtivePropertyInstance1, PrimtivePropertyInstance2, parent) {
-        var result = {
+    var comparePrimitivePropertyInstances = function (primtivePropertyInstance1, primtivePropertyInstance2, node) {
+        var ID = "@IDinComponentModel",
+            result = {
                 success: true,
                 messages: []
             };
+        // todo: this returns true/false?
+
+        if (primtivePropertyInstance1[ID] !== primtivePropertyInstance2[ID]) {
+            result.success = false;
+            result.messages.push(formatParentTree(parent) + "IDinComponentModel of PrimitiveInstances does not match: " + primtivePropertyInstance1[ID] + ", " + primtivePropertyInstance2[ID]);
+        } else {
+            storeValueFlowInfo(primtivePropertyInstance1, node.parent.name, node.parent, valueFlow1_map);
+            storeValueFlowInfo(primtivePropertyInstance2, node.parent.name, node.parent, valueFlow2_map);
+        }
 
         return result;
 
@@ -679,7 +695,10 @@ var compareAdms = function (adm1, adm2) {
             refId2,
             id2Index,
             connector1_compIds = [],
-            connector2_compIds = [];
+            connector2_compIds = [],
+            sorted_compIds1 = {},
+            sorted_compIds2 = {},
+            key;
 
         for (i = 0; i < keys1.length; i += 1) {
             // each pair must have matching parentName
@@ -697,9 +716,6 @@ var compareAdms = function (adm1, adm2) {
                 result.messages.push(formatParentTree(val1.parent) + "Number of id references in ConnectorComposition does not match");
                 return result;
             } else {
-                // sort the compositionID arrays
-                connector1_compIds.sort();
-                connector2_compIds.sort();
 
                 for (j = 0; j < connector1_compIds.length; j += 1) {
                     refId1 = connector1_compIds[j];
@@ -722,12 +738,21 @@ var compareAdms = function (adm1, adm2) {
                     parentName1 = connectorComposition1_map[keys1[id1Index]].parentName;
                     parentName2 = connectorComposition2_map[keys1[id2Index]].parentName;
 
-                    if (parentName1 !== parentName2) {
-                        result.success = false;
-                        result.messages.push(formatParentTree(val1.parent) + "ConnectorComposition reference IDs do not match: " + refId1 + ", " + refId2);
-                        return result;
-                    }
+                    // todo: find a unique identifier or compare all pairs with the name value
+                    sorted_compIds1[refId1] = parentName1;
+                    sorted_compIds2[refId2] = parentName2;
+
                 }
+
+                // todo: sort the object by value (parentName) -- maybe converting it to an array first...
+
+
+                if (parentName1 !== parentName2) {
+                    result.success = false;
+                    result.messages.push(formatParentTree(val1.parent) + "ConnectorComposition reference IDs do not match: " + refId1 + ", " + refId2);
+                    return result;
+                }
+
             }
         }
 
