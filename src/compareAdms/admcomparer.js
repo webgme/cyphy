@@ -46,6 +46,9 @@ var compareAdms = function (adm1, adm2) {
             };
 
         result = compareContainers(root1, root2, rootNode);
+        if (result.success) {
+            result = compareConnectorComposition();
+        }
         return result;
     };
 
@@ -67,10 +70,12 @@ var compareAdms = function (adm1, adm2) {
             container2,
             node;
 
-        if (JSON.stringify(containerArray1, null) === JSON.stringify(containerArray2, null)) {
-            result.success = true;
-            result.messages.push("The designs have the same containers");
-        } else if (len1 !== len2) {
+//        if (JSON.stringify(containerArray1, null) === JSON.stringify(containerArray2, null)) {
+//            result.success = true;
+//            result.messages.push("The designs have the same containers");
+//        } else
+
+        if (len1 !== len2) {
             result.success = false;
             result.messages.push(formatParentTree(parent) + "Number of containers does not match: " + len1 + ", " + len2);
         } else {
@@ -135,10 +140,12 @@ var compareAdms = function (adm1, adm2) {
             };
 
         parent.children.push(node);
-        if (JSON.stringify(container1, null) === JSON.stringify(container2, null)) {
-            result.success = true;
+//        if (JSON.stringify(container1, null) === JSON.stringify(container2, null)) {
+//            result.success = true;
+//
+//        } else
 
-        } else if (name1 !== name2) {
+        if (name1 !== name2) {
             result.success = false;
             result.messages.push(formatParentTree(parent) + "Name of Containers does not match: " + name1 + ", " + name2);
         } else if (type1 !== type2) {
@@ -178,10 +185,12 @@ var compareAdms = function (adm1, adm2) {
             instance2,
             node;
 
-        if (JSON.stringify(componentInstanceArray1, null) === JSON.stringify(componentInstanceArray2, null)) {
-            result.success = true;
-            result.messages.push("The designs have the same containers");
-        } else if (len1 !== len2) {
+//        if (JSON.stringify(componentInstanceArray1, null) === JSON.stringify(componentInstanceArray2, null)) {
+//            result.success = true;
+//            result.messages.push("The designs have the same containers");
+//        } else
+
+        if (len1 !== len2) {
             result.success = false;
             result.messages.push(formatParentTree(parent) + "Number of ComponentInstances does not match: " + len1 + ", " + len2);
         } else {
@@ -234,10 +243,12 @@ var compareAdms = function (adm1, adm2) {
             id1 = componentInstance1[COMPONENT_ID],
             id2 = componentInstance2[COMPONENT_ID];
 
-        if (JSON.stringify(componentInstance1, null) === JSON.stringify(componentInstance2, null)) {
-            result.success = true;
-            result.messages.push("The containers have the same ComponentInstances");
-        } else if (name1 !== name2) {
+//        if (JSON.stringify(componentInstance1, null) === JSON.stringify(componentInstance2, null)) {
+//            result.success = true;
+//            result.messages.push("The containers have the same ComponentInstances");
+//        } else
+
+        if (name1 !== name2) {
             result.success = false;
             result.messages.push(formatParentTree(parent) + "Name of ComponentInstance does not match: " + name1 + ", " + name2);
         } else if (id1 !== id2) {
@@ -380,7 +391,7 @@ var compareAdms = function (adm1, adm2) {
 
             for (i = 0; i < connectorInstanceArray1.length; i += 1) {
                 node = {
-                    name: null,
+                    name: "",
                     type: 'ConnectorInstance',
                     parent: parent,
                     children: []
@@ -768,21 +779,33 @@ var compareAdms = function (adm1, adm2) {
                     id1Index = keys1.indexOf(refId1);
                     id2Index = keys2.indexOf(refId2);
 
-                    parentName1 = connector1_compIds[keys1[id1Index]].parentName;
-                    parentName2 = connector2_compIds[keys1[id2Index]].parentName;
+                    if (id1Index === -1) {
+                        result.success = false;
+                        result.messages.push(formatParentTree(val1.parent) + "Connector referenced with ID: " + refId1 + " is not found: ");
+                        break;
+                    }
+
+                    if (id2Index === -1) {
+                        result.success = false;
+                        result.messages.push(formatParentTree(val2.parent) + "Connector referenced with ID: " + refId2 + " is not found: ");
+                        break;
+                    }
+
+                    parentName1 = connectorComposition1_map[keys1[id1Index]].parentName;
+                    parentName2 = connectorComposition2_map[keys1[id2Index]].parentName;
 
                     if (parentName1 !== parentName2) {
                         result.success = false;
-                        result.messages.push(formatParentTree(connector1_compIds[keys1[id1Index]].parent) + "Reference in ConnectorComposition does not match");
+                        result.messages.push(formatParentTree(val1.parent) + "ConnectorComposition reference IDs do not match: " + refId1 + ", " + refId2);
                         break;
                     }
                 }
             }
 
-
 //            }
-
         }
+
+        return result;
     };
 
     var extractValues = function (valueObject) {
