@@ -1,6 +1,6 @@
 var adm2Object = require('./dependencies/adm2object.js');
-//var adm1 = adm2Object('./src/compareAdms/samples/d1.adm');
-//var adm2 = adm2Object('./src/compareAdms/samples/d2.adm');
+//var adm1 = adm2Object('./src/compareAdms/samples/dhs.adm');
+//var adm2 = adm2Object('./src/compareAdms/samples/dhsID.adm');
 var adm1 = adm2Object('./src/compareAdms/samples/MyMassSpringDamper.adm');
 var adm2 = adm2Object('./src/compareAdms/samples/Wheel.adm');
 
@@ -695,7 +695,7 @@ var compareAdms = function (adm1, adm2) {
             if (connector1_compIds.length !== connector2_compIds.length) {
                 result.success = false;
                 result.messages.push(formatParentTree(val1.parent) + "Number of id references in ConnectorComposition does not match");
-                break;
+                return result;
             } else {
                 // sort the compositionID arrays
                 connector1_compIds.sort();
@@ -709,14 +709,14 @@ var compareAdms = function (adm1, adm2) {
 
                     if (id1Index === -1) {
                         result.success = false;
-                        result.messages.push(formatParentTree(val1.parent) + "Connector referenced with ID: " + refId1 + " is not found: ");
-                        break;
+                        result.messages.push(formatParentTree(val1.parent) + "Design 1 Connector referenced with ID: " + refId1 + " is not found: ");
+                        return result;
                     }
 
                     if (id2Index === -1) {
                         result.success = false;
-                        result.messages.push(formatParentTree(val2.parent) + "Connector referenced with ID: " + refId2 + " is not found: ");
-                        break;
+                        result.messages.push(formatParentTree(val2.parent) + "Design 2 Connector referenced with ID: " + refId2 + " is not found: ");
+                        return result;
                     }
 
                     parentName1 = connectorComposition1_map[keys1[id1Index]].parentName;
@@ -725,7 +725,7 @@ var compareAdms = function (adm1, adm2) {
                     if (parentName1 !== parentName2) {
                         result.success = false;
                         result.messages.push(formatParentTree(val1.parent) + "ConnectorComposition reference IDs do not match: " + refId1 + ", " + refId2);
-                        break;
+                        return result;
                     }
                 }
             }
