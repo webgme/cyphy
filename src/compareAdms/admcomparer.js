@@ -1,8 +1,8 @@
 var adm2Object = require('./dependencies/adm2object.js');
-var adm1 = adm2Object('./src/compareAdms/samples/d1.adm');
-var adm2 = adm2Object('./src/compareAdms/samples/d2.adm');
-//var adm1 = adm2Object('./src/compareAdms/samples/MyMassSpringDamper.adm');
-//var adm2 = adm2Object('./src/compareAdms/samples/Wheel.adm');
+//var adm1 = adm2Object('./src/compareAdms/samples/d1.adm');
+//var adm2 = adm2Object('./src/compareAdms/samples/d2.adm');
+var adm1 = adm2Object('./src/compareAdms/samples/MyMassSpringDamper.adm');
+var adm2 = adm2Object('./src/compareAdms/samples/Wheel.adm');
 
 var formulas = [];
 var primitiveProperyInstances = [];
@@ -313,6 +313,7 @@ var compareAdms = function (adm1, adm2) {
 
     var compareConnectors = function (connector1, connector2, parent) {
         var NAME = "@Name",
+            TYPE = "Connector",
             ELEMENT = "Role",
             result = {
                 success: true,
@@ -324,8 +325,8 @@ var compareAdms = function (adm1, adm2) {
             result.success = false;
             result.messages.push(formatParentTree(parent) + "Name of Connectors does not match: " + connector1[NAME] + ", " + connector2[NAME]);
         } else {
-            storeConnectorCompositionInfo(connector1, connector1[NAME], parent, connectorComposition1_map);
-            storeConnectorCompositionInfo(connector2, connector2[NAME], parent, connectorComposition2_map);
+            storeConnectorCompositionInfo(connector1, connector1[NAME], TYPE, parent, connectorComposition1_map);
+            storeConnectorCompositionInfo(connector2, connector2[NAME], TYPE, parent, connectorComposition2_map);
             if (connector1.hasOwnProperty(ELEMENT) === connector2.hasOwnProperty(ELEMENT)) { // todo: use a for loop maybe
                 node = {
                     name: connector1[NAME],
@@ -540,6 +541,7 @@ var compareAdms = function (adm1, adm2) {
      */
     var compareConnectorInstances = function (connectorInstance1, connectorInstance2, node) {
         var ID = "@IDinComponentModel",
+            TYPE = 'ConnectorInstance',
             result = {
                 success: true,
                 messages: []
@@ -549,8 +551,8 @@ var compareAdms = function (adm1, adm2) {
             result.success = false;
             result.messages.push(formatParentTree(node), "IDinComponentModel of ConnectorInstances does not match: " + connectorInstance1[ID] + ", " + connectorInstance2[ID]);
         } else {
-            storeConnectorCompositionInfo(connectorInstance1, node.parent.name, node, connectorComposition1_map);
-            storeConnectorCompositionInfo(connectorInstance2, node.parent.name, node, connectorComposition2_map);
+            storeConnectorCompositionInfo(connectorInstance1, node.parent.name, TYPE, node, connectorComposition1_map);
+            storeConnectorCompositionInfo(connectorInstance2, node.parent.name, TYPE, node, connectorComposition2_map);
         }
 
         return result;
@@ -563,7 +565,7 @@ var compareAdms = function (adm1, adm2) {
      * @param parent - parent node, either a Connector or a ConnectorInstance
      * @param map - which map to store such info to
      */
-    var storeConnectorCompositionInfo = function (element, parentName, parent, map) {
+    var storeConnectorCompositionInfo = function (element, parentName, type, parent, map) {
         var CONNECTOR_COMPOSITION = "@ConnectorComposition",
             ID = "@ID",
             compositionId,
@@ -574,6 +576,7 @@ var compareAdms = function (adm1, adm2) {
         id = element[ID];
         value = {
             compositionId: compositionId,
+            type: type,
             parentName: parentName,
             parent: parent
         };
@@ -694,11 +697,12 @@ var compareAdms = function (adm1, adm2) {
             parentName2,
             refId2,
             id2Index,
+            msg,
+            type,
             connector1_compIds = [],
             connector2_compIds = [],
-            sorted_compIds1 = {},
-            sorted_compIds2 = {},
-            key;
+            compositionArray1 = [],
+            compositionArray2 = [];
 
         for (i = 0; i < keys1.length; i += 1) {
             // each pair must have matching parentName
@@ -713,13 +717,27 @@ var compareAdms = function (adm1, adm2) {
             // number of ids in ConnectorComposition needs to match
             if (connector1_compIds.length !== connector2_compIds.length) {
                 result.success = false;
-                result.messages.push(formatParentTree(val1.parent) + "Number of id references in ConnectorComposition does not match");
+                result.messages.push(formatParentTree(val1.parent) + "Number of id references in ConnectorComposition does not match.");
                 return result;
             } else {
+                // if one compositionID is empty string, the other compositionID is not, then return false
+
+                if (connector1_compIds.length === 1 && (connector1_compIds[0] === "" || connector2_compIds[0] === "")) {
+                    if (connector1_compIds[0] !== connector2_compIds[0]) {
+                        parentName1 = val1.parentName;
+                        result.success = false;
+                        msg = val1.type + " does not have the same connections."; // todo: add what each connector is connected to
+                        result.messages.push(formatParentTree(val1.parent) + msg);
+                        return result;
+                    } else {
+                        continue;
+                    }
+                }
 
                 for (j = 0; j < connector1_compIds.length; j += 1) {
                     refId1 = connector1_compIds[j];
                     refId2 = connector2_compIds[j];
+
                     id1Index = keys1.indexOf(refId1);
                     id2Index = keys2.indexOf(refId2);
 
@@ -736,20 +754,22 @@ var compareAdms = function (adm1, adm2) {
                     }
 
                     parentName1 = connectorComposition1_map[keys1[id1Index]].parentName;
-                    parentName2 = connectorComposition2_map[keys1[id2Index]].parentName;
+                    parentName2 = connectorComposition2_map[keys2[id2Index]].parentName;
 
                     // todo: find a unique identifier or compare all pairs with the name value
-                    sorted_compIds1[refId1] = parentName1;
-                    sorted_compIds2[refId2] = parentName2;
 
+                    compositionArray1.push(parentName1);
+                    compositionArray2.push(parentName2);
                 }
 
-                // todo: sort the object by value (parentName) -- maybe converting it to an array first...
+                result.success = compareAllCompositionPairsInArrays(compositionArray1, compositionArray2);
 
-
-                if (parentName1 !== parentName2) {
-                    result.success = false;
-                    result.messages.push(formatParentTree(val1.parent) + "ConnectorComposition reference IDs do not match: " + refId1 + ", " + refId2);
+                if (!result.success) {
+                    parentName1 = connectorComposition1_map[refId1].parentName;
+                    type = connectorComposition1_map[refId1].type;
+                    msg = type + " " + parentName1 + "does not connect to the same connections; they connect to: " + compositionArray1.toString() +
+                        " and " + compositionArray2.toString() + " respectively.";
+                    result.messages.push(formatParentTree(val1.parent) + msg);
                     return result;
                 }
 
@@ -872,51 +892,85 @@ var compareAdms = function (adm1, adm2) {
 //        return result;
 //    };
 
-//    /**
-//     * When two component arrays have equal length, compare each pair of components
-//     * success - if component array length number of pairs match
-//     * fail - otherwise
-//     * @param name
-//     * @param type
-//     * @param parent
-//     * @param componentArray1
-//     * @param componentArray2
-//     * @param nextFunc
-//     */
-//    var compareAllPairsInArrays = function (name, type, parent, componentArray1, componentArray2, nextFunc) {
-//        var TARGET = componentArray1.length,
-//            counter = 0,
-//            i,
-//            j,
-//            node,
-//            result = {
-//                success: true,
-//                messages: []
-//            };
-//
-//        for (i = 0; i < componentArray1.length; i += 1) {
-//            for (j = 0; j < componentArray1.length; j += 1) {
-//                node = {
-//                    name: name,
-//                    type: type,
-//                    parent: parent,
-//                    children: []
-//                };
-//                result = nextFunc(componentArray1[i], componentArray2[j], node);
-//                if (result.success) {
-//                    ++counter;
-//                    componentArray1.splice(i, 1);
-//                    componentArray2.splice(j, 1);
-//                    --i;
-//                    --j;
-//                }
-//            }
-//        }
-//
-//        if (counter !== TARGET) {
-//            result.success = false;
-//
-//        }
-//    };
+
+    /**
+     * When two component arrays have equal length, compare each pair of components
+     * success - if component array length number of pairs match
+     * fail - otherwise
+     * @param arr1
+     * @param arr2
+     */
+    var compareAllCompositionPairsInArrays = function (arr1, arr2) {
+        var TARGET = arr1.length,
+            counter = 0,
+            i,
+            j,
+            success = true;
+
+        for (i = 0; i < arr1.length; i += 1) {
+            for (j = 0; j < arr1.length; j += 1) {
+                if (arr1[i] === arr2[j]) {
+                    ++counter;
+                    arr1.splice(i, 1);
+                    arr2.splice(j, 1);
+                    --i;
+                    --j;
+                }
+            }
+        }
+
+        if (counter !== TARGET) {
+            success = false;
+        }
+
+        return success;
+    };
+
+    /**
+     * When two component arrays have equal length, compare each pair of components
+     * success - if component array length number of pairs match
+     * fail - otherwise
+     * @param name
+     * @param type
+     * @param parent
+     * @param componentArray1
+     * @param componentArray2
+     * @param nextFunc
+     */
+    var compareAllPairsInArrays = function (name, type, parent, componentArray1, componentArray2, nextFunc) {
+        var TARGET = componentArray1.length,
+            counter = 0,
+            i,
+            j,
+            node,
+            result = {
+                success: true,
+                messages: []
+            };
+
+        for (i = 0; i < componentArray1.length; i += 1) {
+            for (j = 0; j < componentArray1.length; j += 1) {
+                node = {
+                    name: name,
+                    type: type,
+                    parent: parent,
+                    children: []
+                };
+                result = nextFunc(componentArray1[i], componentArray2[j], node);
+                if (result.success) {
+                    ++counter;
+                    componentArray1.splice(i, 1);
+                    componentArray2.splice(j, 1);
+                    --i;
+                    --j;
+                }
+            }
+        }
+
+        if (counter !== TARGET) {
+            result.success = false;
+
+        }
+    };
 
 console.log (compareAdms(adm1, adm2));

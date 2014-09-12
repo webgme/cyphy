@@ -20,3 +20,5 @@ src/compareAdms/samples/d1.adm
 src/compareAdms/samples/d2.adm
 src/compareAdms/samples/dhs.adm
 src/compareAdms/samples/dhsID.adm
+src/compareAdms/samples/MyMassSpringDamper.adm
+*.adm
