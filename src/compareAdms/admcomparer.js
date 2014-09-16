@@ -229,7 +229,7 @@ var compareAdms = function (adm1, adm2) {
                         "ConnectorInstance"],
             i,
             FUNCTIONS = [
-                comparePrimitivePropertyInstanceArrays,   // todo: is this checked here or in valueflow checks?
+                comparePrimitivePropertyInstanceArrays,
                 compareConnectorInstanceArrays
             ],
             name1 = componentInstance1[NAME],
@@ -516,8 +516,6 @@ var compareAdms = function (adm1, adm2) {
                 return a[ID] > b[ID];
             });
 
-            // todo: can sorting be done here? ***************************************
-
             for (i = 0; i < connectorInstanceArray1.length; i += 1) {
                 node = {
                     name: "",
@@ -646,7 +644,7 @@ var compareAdms = function (adm1, adm2) {
                 ins1 = primitivePropertyInstanceArray1[i];
                 ins2 = primitivePropertyInstanceArray2[i];
                 node = {
-                    name: "",
+                    name: primitivePropertyInstanceArray1[ID], // a way to identify the instance we are looking at
                     type: 'PrimitivePropertyInstance',
                     parent: parent,
                     children: []
@@ -674,31 +672,59 @@ var compareAdms = function (adm1, adm2) {
             result.success = false;
             result.messages.push(formatParentTree(parent) + "IDinComponentModel of PrimitiveInstances does not match: " + primtivePropertyInstance1[ID] + ", " + primtivePropertyInstance2[ID]);
         } else {
-            storeValueFlowInfo(primtivePropertyInstance1[VALUE], node.parent.name, TYPE, node.parent, valueFlow1_map);
-            storeValueFlowInfo(primtivePropertyInstance2[VALUE], node.parent.name, TYPE, node.parent, valueFlow2_map);
+            storeValueFlowInfo(primtivePropertyInstance1[VALUE], node.name, TYPE, node, valueFlow1_map);
+            storeValueFlowInfo(primtivePropertyInstance2[VALUE], node.name, TYPE, node, valueFlow2_map);
         }
 
         return result;
     };
 
-    var storeValueFlowInfo = function (valueFlowElement, parentName, type, parent, map) {
-        var VALUE = "Value",
-            UNIQUE_ID = "@IDinComponentModel",
+    /**
+     *
+     * @param valueFlowElement - Value element of either a PrimitivePropertyInstance or a Property
+     * @param parentIdentifier - Name of a Property or IDinComponentModel of a PrimitivePropertyInstance
+     * @param type - either a PrimitivePropertyInstance value or a Property value
+     * @param parent - the parent node of Value element
+     * @param map - which design map to store info to
+     */
+    var storeValueFlowInfo = function (valueFlowElement, parentIdentifier, type, parent, map) {
+        var UNIQUE_ID = "@IDinComponentModel",
+            VALUE_EXP = "ValueExpression",
+            XSI_TYPE = "@xsi:type",
+            FIXED = "FixedValue",
+            PARAM = "ParametricValue",
+            DERIVED = "DerivedValue",
+            xsi,
+            Value = "Value",
             ID = "@ID",
             key, // id of value stored as key of LUT
             value;
 
-        key = valueFlowElement[VALUE][ID];
+        key = valueFlowElement[ID];
+        // if ValueExpression exists within a Value element
+        if (valueFlowElement[VALUE_EXP]) {
+            xsi = valueFlowElement[VALUE_EXP][XSI_TYPE];
+
+            if (xsi.indexOf(FIXED) > -1) {
+                // 1. if ValueExpression is a FixedValue - Identifier is the Value of this ValueExpression.
+
+            } else if (xsi.indexOf(PARAM) > -1) {
+                // 2. ValueExpression is ParametricValue - Is end when ValueExpression/AssignedValue is FixedValue- Identifier is the Value of this AssignedValue.
+
+            } else if (xsi.indexOf(DERIVED) > -1) {
+                // 3. ValueExpression is DerivedValue - its source needs to be stored and tracked
+
+            }
+        }
 
         value = {
             propertyId: valueFlowElement[UNIQUE_ID],
             type: type,
-            parentName: parentName,
+            parentName: parentIdentifier,
             parent: parent
         };
         map[key] = value;
     };
-
 
 
     /**
@@ -756,7 +782,11 @@ var compareAdms = function (adm1, adm2) {
                     if (connector1_compIds[0] !== connector2_compIds[0]) {
                         parentName1 = val1.parentName;
                         result.success = false;
-                        msg = val1.type + " does not have the same connections."; // todo: add what each connector is connected to
+                        if (connector1_compIds[0] === "") {
+                            msg = val1.type + " in design 1 does not connect to any connection";
+                        } else if (connector2_compIds[0] === "") {
+                            msg = val1.type + " in design 2 does not connect to any connection";
+                        }
                         result.messages.push(formatParentTree(val1.parent) + msg);
                         return result;
                     } else {
@@ -785,8 +815,6 @@ var compareAdms = function (adm1, adm2) {
 
                     parentName1 = connectorComposition1_map[keys1[id1Index]].parentName;
                     parentName2 = connectorComposition2_map[keys2[id2Index]].parentName;
-
-                    // todo: find a unique identifier or compare all pairs with the name value
 
                     compositionArray1.push(parentName1);
                     compositionArray2.push(parentName2);
