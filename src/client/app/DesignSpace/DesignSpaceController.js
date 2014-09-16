@@ -29,7 +29,6 @@ define(['../../js/DesertFrontEnd',
             }
         });
 
-        self.menuItemSave = null;
         self.chance = Chance ? new Chance() : null;
         self.territories = {};
         self.initialize();
@@ -112,11 +111,6 @@ define(['../../js/DesertFrontEnd',
 
         self.$rootScope.appIsLoading = true;
         self.update();
-        self.territories[self.$scope.id] = {
-            nodeId: self.$scope.id,
-            territoryId: null,
-            hasLoaded: false
-        };
         territoryId = self.smartClient.client.addUI(null, function (events) {
             var i,
                 event,
@@ -128,7 +122,15 @@ define(['../../js/DesertFrontEnd',
             for (i = 0; i < events.length; i += 1) {
                 event = events[i];
                 nodeObj = self.smartClient.client.getNode(event.eid);
-                if (event.eid === self.$scope.id) {
+                if (event.etype === 'unload') {
+                    if (event.eid === self.$scope.id) {
+                        self.growl.warning(self.$scope.name + ' was deleted.');
+                        self.$location.path('/workspace');
+                    } else if (self.removeContainer(event.eid)) {
+                        // Container was removed
+                        unloadOccurred = true;
+                    }
+                } else if (event.eid === self.$scope.id) {
                     if (event.etype === 'load') {
                         self.$scope.name = nodeObj.getAttribute('name');
                         self.$scope.description = nodeObj.getAttribute('INFO');
@@ -166,29 +168,25 @@ define(['../../js/DesertFrontEnd',
                                         };
                                         for (k = 0; k < cfg.AlternativeAssignment.length; k += 1) {
                                             altAss = cfg.AlternativeAssignment[k];
-                                            self.$scope.desert.cfgs[cfg['@id']].alternativeAssignments[elemIdToPath[altAss['@alternative_end_']]] = true;
+                                            self.$scope.desert.cfgs[cfg['@id']].alternativeAssignments[elemIdToPath[altAss['@alternative_end_']]] = {
+                                                selectedAlternative: elemIdToPath[altAss['@alternative_end_']],
+                                                alternativeOf: elemIdToPath[altAss['@alternative_of_end_']]
+                                            };
                                         }
                                     }
                                     self.$scope.desert.selectedCfg = self.$scope.desert.cfgs['1'];
-                                    self.menuItemSave.disabled = false;
                                     self.update();
                                 });
                             }
                         });
                     } else if (event.etype === 'update') {
                         console.warn('Update not handled for root-container!');
-                    } else if (event.etype === 'unload') {
-                        self.growl.warning(self.$scope.name + ' was deleted.');
-                        self.$location.path('/workspace');
                     }
                 } else if (self.smartClient.isMetaTypeOf(event.eid, 'Container')) {
                     if (event.etype === 'load') {
                         self.addContainer(event.eid);
                     } else if (event.etype === 'update') {
                         console.log('container ' + self.$scope.containers[event.eid].name + ' updated.');
-                    } else if (event.etype === 'unload') {
-                        self.removeContainer(event.eid);
-                        unloadOccurred = true;
                     }
                 } else if (self.smartClient.isMetaTypeOf(event.eid, 'AVMComponentModel')) {
                     if (event.etype === 'load') {
@@ -205,7 +203,7 @@ define(['../../js/DesertFrontEnd',
             self.update();
         });
 
-        self.territories[self.$scope.id].territoryId = territoryId;
+        self.territories[self.$scope.id] = { nodeId: self.$scope.id, territoryId: territoryId, hasLoaded: false };
         self.smartClient.client.updateTerritory(territoryId, territoryPattern);
     };
 
@@ -271,7 +269,9 @@ define(['../../js/DesertFrontEnd',
                 }
             }
             delete self.$scope.containers[id];
+            return true;
         }
+        return false;
     };
 
     DesignSpaceController.prototype.addComponent = function (id) {
@@ -320,13 +320,70 @@ define(['../../js/DesertFrontEnd',
                 return;
             }
             desertObject = self.xmlToJson.convertFromBuffer(content);
-            //console.info(JSON.stringify(desertData, null, 2));
+            //console.info(JSON.stringify(desertObject, null, 2));
             if (desertObject instanceof Error) {
                 callback('Output desert XML not valid xml, err: ' + desertObject.message);
                 return;
             }
             callback(null, desertObject.DesertBackSystem);
         });
+    };
+
+    DesignSpaceController.prototype.saveConfigurationSet = function (name) {
+        var self = this,
+            key,
+            aaKey,
+            cfgSetPath,
+            cfgPath,
+            aa,
+            cfgCnt = 0,
+            timeStamp = new Date().toString(),
+            cfg;
+
+        // Create the configuration set node.
+        cfgSetPath = self.smartClient.client.createChild({
+            parentId: self.$scope.id,
+            baseId: self.smartClient.metaNodes.DesertConfigurationSet.getId()
+        });
+        if (name) {
+            self.smartClient.client.setAttributes(cfgSetPath, 'name', name, '[WebCyPhy] - DesertCfg was named: ' + name);
+        }
+        self.smartClient.client.setAttributes(cfgSetPath, 'INFO', timeStamp,
+                '[WebCyPhy] - DesertCfg got new INFO: ' + timeStamp);
+        self.growl.info('Created new DesertConfigurationSet in model. Adding configurations..');
+        // Go through cfgs and for the selected ones add new configuration nodes.
+        for (key in self.$scope.desert.cfgs) {
+            if (self.$scope.desert.cfgs.hasOwnProperty(key)) {
+                cfg = self.$scope.desert.cfgs[key];
+                if (cfg.isSelected) {
+                    cfgCnt += 1;
+                    cfgPath = self.smartClient.client.createChild({
+                        parentId: cfgSetPath,
+                        baseId: self.smartClient.metaNodes.DesertConfiguration.getId()
+                    });
+                    aa = [];
+                    for (aaKey in cfg.alternativeAssignments) {
+                        if (cfg.alternativeAssignments.hasOwnProperty(aaKey)) {
+                            aa.push(cfg.alternativeAssignments[aaKey]);
+                        }
+                    }
+                    self.smartClient.client.setAttributes(cfgPath, 'name', cfg.name,
+                            '[WebCyPhy] - DesertCfg was named: ' + cfg.name);
+                    self.smartClient.client.setAttributes(cfgPath, 'AlternativeAssignments', JSON.stringify(aa, null),
+                            '[WebCyPhy] - DesertCfg got AlternativeAssignments');
+                }
+            }
+        }
+        if (cfgCnt > 0) {
+            self.growl.success('Created new DesertConfigurations in model.');
+        } else {
+            self.growl.warning('There were no selected configurations.');
+        }
+    };
+
+    DesignSpaceController.prototype.loadConfigurationSet = function () {
+        var self = this;
+        self.growl.warning('Will open configuration window!');
     };
 
     DesignSpaceController.prototype.getNavigatorStructure = function (node) {
@@ -345,26 +402,7 @@ define(['../../js/DesertFrontEnd',
             return {};
         }
         self.menuItemSave = {
-            id: 'saveCfgs',
-            label: 'Save Configurations',
-            disabled: true,
-            iconClass: 'glyphicon glyphicon-floppy-save',
-            action: function () {
-                var key,
-                    cfg;
-                if (!self.$scope.desert) {
-                    console.error('No desert defined on scope');
-                }
-                for (key in self.$scope.desert.cfgs) {
-                    if (self.$scope.desert.cfgs.hasOwnProperty(key)) {
-                        cfg = self.$scope.desert.cfgs[key];
-                        if (cfg.isSelected) {
-                            self.growl.warning('Would save cfg : ' + JSON.stringify(cfg, null, 2));
-                        }
-                    }
-                }
-            },
-            actionData: {}
+
         };
         firstMenu = {
             id: 'root',
@@ -415,7 +453,35 @@ define(['../../js/DesertFrontEnd',
                         },
                         actionData: {}
                     },
-                    self.menuItemSave
+                    {
+                        id: 'saveCfgs',
+                        label: 'Save Configurations',
+                        disabled: false,
+                        iconClass: 'glyphicon glyphicon-floppy-save',
+                        action: function () {
+                            self.growl.info('Saving configurations...');
+                            if (!self.$scope.desert) {
+                                self.growl.error('Nothing to save.');
+                                return;
+                            }
+                            if (Object.keys(self.$scope.desert.cfgs).length === 0) {
+                                self.growl.error('No configurations to save. Did you calculate the design space?');
+                                return;
+                            }
+                            self.saveConfigurationSet();
+                        },
+                        actionData: {}
+                    },
+                    {
+                        id: 'loadCfgs',
+                        label: 'Load Configurations',
+                        disabled: false,
+                        iconClass: 'glyphicon glyphicon-floppy-open',
+                        action: function () {
+                            self.loadConfigurationSet();
+                        },
+                        actionData: {}
+                    }
                 ]
             }, {
                 id: 'editor',

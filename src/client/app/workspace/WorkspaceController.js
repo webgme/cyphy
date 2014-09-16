@@ -13,7 +13,6 @@ define([], function () {
 
         self.$scope = $scope;
         self.$rootScope = $rootScope;
-
         self.smartClient = smartClient;
         self.$modal = $modal;
         self.$moment = $moment;
@@ -22,7 +21,7 @@ define([], function () {
         self.growl = growl;
         // chance is only for testing purposes
         self.chance = Chance ? new Chance() : null;
-
+        self.territories = {};
         self.$scope.mainNavigator.items = [{
             id: 'root',
             label: 'ADMEditor',
@@ -99,6 +98,20 @@ define([], function () {
         self.$scope.pager.pageChanged = function () {
             console.log('Page changed to: ' + self.$scope.pager.currentPage);
         };
+
+        self.$scope.$on('$destroy', function () {
+            var key;
+            for (key in self.territories) {
+                if (self.territories.hasOwnProperty(key)) {
+                    if (self.territories[key].territoryId) {
+                        self.smartClient.removeUI(self.territories[key].territoryId);
+                        console.log('Removed Territory ', self.territories[key].territoryId);
+                    } else {
+                        console.error('No territoryId for ', self.territories[key]);
+                    }
+                }
+            }
+        });
 
         // New workspace
         self.cleanNewWorkspace(false);
@@ -202,21 +215,9 @@ define([], function () {
 
         self.idCounter = 0;
 
-        self.$scope.serverInfo = {
-            version: '0.1.0',
-            osName: 'Windows_NT',
-            node: 'v0.10.28'
-        };
-
         self.$scope.createWorkspace = function (workspace) {
             var id = '/' + self.idCounter,
                 today;
-
-            // sample to use growl
-//            self.growl.success('createWorkspace ' + new Date());
-//            self.growl.warning('createWorkspace ' + new Date());
-//            self.growl.info('createWorkspace ' + new Date());
-//            self.growl.error('createWorkspace ' + new Date());
 
             today = new Date();
 
@@ -407,53 +408,46 @@ define([], function () {
             clientMessage,
             k;
 
-        self.getServerInfo(function (info) {
-            self.$scope.serverInfo = info;
-        });
-
         for (k = 0; k < self.smartClient.initialMessages.length; k += 1) {
             clientMessage = self.smartClient.initialMessages[k];
             if (clientMessage.severity === 'info') {
                 self.growl.success(clientMessage.message);
-            } else if (clientMessage.severity === 'debug') {
-                self.growl.info(clientMessage.message, {ttl: 1000});
+//            } else if (clientMessage.severity === 'debug') {
+//                // self.growl.info(clientMessage.message, {ttl: 1000});
             } else if (clientMessage.severity === 'warning') {
                 self.growl.warning(clientMessage.message);
             } else if (clientMessage.severity === 'error') {
                 self.growl.error(clientMessage.message);
             }
         }
-        self.territories = {};
+
         territoryPattern[ROOT_ID] = {children: 1};
 
         territoryId = self.smartClient.client.addUI(null, function (events) {
             var i,
-                event,
-                nodeObj;
+                event;
 
             for (i = 0; i < events.length; i += 1) {
                 event = events[i];
-                nodeObj = self.smartClient.client.getNode(event.eid);
-
-                if (event.eid === ROOT_ID && event.etype === 'load') {
+                if (event.etype === 'unload') {
+                    if (self.$scope.workspaces[event.eid]) {
+                        self.removeTerritory(event.eid);
+                        delete self.$scope.workspaces[event.eid];
+                    }
+                } else if (event.eid === ROOT_ID && event.etype === 'load') {
                     self.$scope.createWorkspace = self.initCreateWorkspaceClient(ROOT_ID);
                     self.$scope.deleteWorkspace = self.initDeleteWorkspaceClient();
                     self.$scope.duplicateWorkspace = self.initDuplicateWorkspaceClient(ROOT_ID);
                     self.$scope.exportWorkspace = self.initExportWorkspaceClient();
                     self.$scope.onDroppedFiles = self.initOnDroppedFilesClient();
-                }
-
-                if (self.smartClient.isMetaTypeOf(nodeObj, 'WorkSpace')) {
-                    if (nodeObj.getId() !== self.smartClient.metaNodes.WorkSpace.getId()) {
-                        if (event.etype === 'load' || event.etype === 'update') {
-                            self.addWorkspaceWatch(nodeObj);
+                } else if (self.smartClient.isMetaTypeOf(event.eid, 'WorkSpace')) {
+                    if (event.eid !== self.smartClient.metaNodes.WorkSpace.getId()) {
+                        if (event.etype === 'load') {
+                            self.addWorkspaceWatch(event.eid);
+                        } else if (event.etype === 'update') {
+                            self.updateWorkspace(event.eid);
                         }
                     }
-                }
-
-                if (event.etype === 'unload' && self.$scope.workspaces.hasOwnProperty(event.eid)) {
-                    self.smartClient.removeUI(self.territories[event.eid]);
-                    delete self.$scope.workspaces[event.eid];
                 }
             }
 
@@ -464,16 +458,91 @@ define([], function () {
             self.update();
         });
 
+        self.territories[ROOT_ID] = { nodeId: ROOT_ID, territoryId: territoryId, hasLoaded: false };
         self.smartClient.client.updateTerritory(territoryId, territoryPattern);
     };
 
-    WorkspaceController.prototype.addWorkspaceWatch = function (nodeObj) {
+    WorkspaceController.prototype.addWorkspaceWatch = function (id) {
         var self = this,
             j,
+            territoryId;
+
+        self.addWorkspace(id);
+        if (self.removeTerritory(id)) {
+            console.warn('Removed work-space territory ', id);
+        }
+
+        territoryId = self.smartClient.addUI(id, ['ACMFolder', 'ADMFolder', 'ATMFolder', 'RequirementsFolder'], function (events) {
+            var workspace = self.$scope.workspaces[id];
+            if (!workspace) {
+                console.warn('Could not get work-space ', id);
+                return;
+            }
+            for (j = 0; j < events.length; j += 1) {
+                // component
+                if (self.smartClient.isMetaTypeOf(events[j].eid, 'AVMComponentModel')) {
+                    if (events[j].etype === 'load') {
+                        workspace.components.count += 1;
+                    } else if (events[j].etype === 'unload') {
+                        workspace.components.count -= 1;
+                    } else if (events[j].etype === 'update') {
+                        // Nothing to do - just displaying the total number.
+                    } else {
+                        throw 'Unexpected event type' + events[j].etype;
+                    }
+                }
+
+                // design
+                if (self.smartClient.isMetaTypeOf(events[j].eid, 'Container')) {
+                    if (events[j].etype === 'load') {
+                        workspace.designs.count += 1;
+                    } else if (events[j].etype === 'unload') {
+                        workspace.designs.count -= 1;
+                    } else if (events[j].etype === 'update') {
+                        // Nothing to do - just displaying the total number.
+                    } else {
+                        throw 'Unexpected event type' + events[j].etype;
+                    }
+                }
+
+                // test bench
+                if (self.smartClient.isMetaTypeOf(events[j].eid, 'AVMTestBenchModel')) {
+                    if (events[j].etype === 'load') {
+                        workspace.testBenches.count += 1;
+                    } else if (events[j].etype === 'unload') {
+                        workspace.testBenches.count -= 1;
+                    } else if (events[j].etype === 'update') {
+                        // Nothing to do - just displaying the total number.
+                    } else {
+                        throw 'Unexpected event type' + events[j].etype;
+                    }
+                }
+
+                // requirement
+                if (self.smartClient.isMetaTypeOf(events[j].eid, 'RequirementCategory')) {
+                    if (events[j].etype === 'load') {
+                        workspace.requirements.count += 1;
+                    } else if (events[j].etype === 'unload') {
+                        workspace.requirements.count -= 1;
+                    } else if (events[j].etype === 'update') {
+                        // Nothing to do - just displaying the total number.
+                    } else {
+                        throw 'Unexpected event type' + events[j].etype;
+                    }
+                }
+            }
+            self.update();
+        });
+        self.territories[id] = { nodeId: id, territoryId: territoryId, hasLoaded: false };
+    };
+
+    WorkspaceController.prototype.addWorkspace = function (id) {
+        var self = this,
+            nodeObj = self.smartClient.client.getNode(id),
             workspace;
 
         workspace = {
-            id: nodeObj.getId(),
+            id: id,
             name: nodeObj.getAttribute('name'),
             description: nodeObj.getAttribute('INFO'),
             url: '/?project=ADMEditor&activeObject=' + nodeObj.getId(),
@@ -497,71 +566,20 @@ define([], function () {
             }
         };
 
-        self.$scope.workspaces[nodeObj.getId()] = workspace;
+        self.$scope.workspaces[id] = workspace;
+    };
 
-        if (self.territories.hasOwnProperty(nodeObj.getId())) {
-            self.smartClient.removeUI(self.territories[nodeObj.getId()]);
+    WorkspaceController.prototype.updateWorkspace = function (id) {
+        var self = this,
+            workspace = self.$scope.workspaces[id],
+            nodeObj;
+        if (workspace) {
+            nodeObj = self.smartClient.client.getNode(id);
+            workspace.name = nodeObj.getAttribute('name');
+            workspace.description = nodeObj.getAttribute('INFO');
+        } else {
+            console.warn('Trying to update non-existing work-space.');
         }
-
-        self.territories[nodeObj.getId()] = self.smartClient.addUI(nodeObj.getId(), ['ACMFolder', 'ADMFolder', 'ATMFolder', 'RequirementsFolder'], function (events) {
-            for (j = 0; j < events.length; j += 1) {
-                //console.log(events[j]);
-
-                // component
-                if (self.smartClient.isMetaTypeOf(events[j].eid, 'AVMComponentModel')) {
-                    if (events[j].etype === 'load') {
-                        workspace.components.count += 1;
-                    } else if (events[j].etype === 'unload') {
-                        workspace.components.count -= 1;
-                    } else if (events[j].etype === 'update') {
-                        //TODO:  complete
-                    } else {
-                        throw 'Unexpected event type' + events[j].etype;
-                    }
-                }
-
-                // design
-                if (self.smartClient.isMetaTypeOf(events[j].eid, 'Container')) {
-                    if (events[j].etype === 'load') {
-                        workspace.designs.count += 1;
-                    } else if (events[j].etype === 'unload') {
-                        workspace.designs.count -= 1;
-                    } else if (events[j].etype === 'update') {
-                        //TODO:  complete
-                    } else {
-                        throw 'Unexpected event type' + events[j].etype;
-                    }
-                }
-
-                // test bench
-                if (self.smartClient.isMetaTypeOf(events[j].eid, 'AVMTestBenchModel')) {
-                    if (events[j].etype === 'load') {
-                        workspace.testBenches.count += 1;
-                    } else if (events[j].etype === 'unload') {
-                        workspace.testBenches.count -= 1;
-                    } else if (events[j].etype === 'update') {
-                        //TODO:  complete
-                    } else {
-                        throw 'Unexpected event type' + events[j].etype;
-                    }
-                }
-
-                // requirement
-                if (self.smartClient.isMetaTypeOf(events[j].eid, 'RequirementCategory')) {
-                    if (events[j].etype === 'load') {
-                        workspace.requirements.count += 1;
-                    } else if (events[j].etype === 'unload') {
-                        workspace.requirements.count -= 1;
-                    } else if (events[j].etype === 'update') {
-                        //TODO:  complete
-                    } else {
-                        throw 'Unexpected event type' + events[j].etype;
-                    }
-                }
-            }
-
-            self.update();
-        });
     };
 
     // Functions for creating functions that depend on the Root-node being loaded.
@@ -747,13 +765,10 @@ define([], function () {
         var self = this,
             key,
             fileInfo,
-            acmArtie,
-//            acms = {},
             acms = [],
             adms = [],
             atms = [],
             requirements = [],
-            afterAcmImport,
             totalSuccess = true;
         // Import the files dropped by the user.
         for (key in workspaceInfo.addedFiles) {
@@ -761,7 +776,6 @@ define([], function () {
                 fileInfo = workspaceInfo.addedFiles[key];
                 if (fileInfo.type === 'acm') {
                     acms.push(fileInfo.hash);
-//                    acms[fileInfo.name] = fileInfo.hash;
                 } else if (fileInfo.type === 'adm') {
                     adms.push(fileInfo.hash);
                 } else if (fileInfo.type === 'atm') {
@@ -775,7 +789,6 @@ define([], function () {
             }
         }
 
-//        afterAcmImport = function () {
         self.importMultipleFromFiles(workspaceInfo, acms, 'acm', function (acmResults) {
             totalSuccess = totalSuccess && acmResults;
             self.importMultipleFromFiles(workspaceInfo, adms, 'adm', function (admResults) {
@@ -789,32 +802,6 @@ define([], function () {
                 });
             });
         });
-//        };
-//        if (Object.keys(acms).length > 0) {
-//            acmArtie = self.smartClient.blobClient.createArtifact('Uploaded_artifacts.zip');
-//            acmArtie.addMetadataHashes(acms, function (err, hashes) {
-//                // TODO: error-handling
-//                acmArtie.save(function (err, artieHash) {
-//                    // TODO: error-handling
-//                    self.importFromFile(workspaceInfo.id, artieHash, 'acm', function (hash, result) {
-//                        var fileUrl = self.smartClient.blobClient.getDownloadURL(result.hash),
-//                            filename = 'Uploaded_artifacts.zip';
-//                        console.log(result);
-//                        if (result.success === false) {
-//                            totalSuccess = false;
-//                            self.growl.error('AcmImporter failed on <a href="' + fileUrl + '">' + filename + '</a>');
-//                        } else {
-//                            self.growl.success('AcmImporter succeeded on <a href="' + fileUrl + '">' + filename + '</a>');
-//                        }
-//                        self.showPluginMessages(result.messages);
-//                        self.update();
-//                        afterAcmImport();
-//                    });
-//                });
-//            });
-//        } else {
-//            afterAcmImport();
-//        }
     };
 
     WorkspaceController.prototype.importMultipleFromFiles = function (workspaceInfo, hashes, importType, callback) {
@@ -1028,35 +1015,14 @@ define([], function () {
         }
     };
 
-    WorkspaceController.prototype.getServerInfo = function (callback) {
-        var self = this,
-            info = {};
-        self.smartClient.serverInfoClient.os(function (err, res) {
-            if (err) {
-                info.osName = 'N/A';
-                self.logger.error('Could not obtain os-info.');
-            } else {
-                info.osName = res.type;
-            }
-
-            self.smartClient.serverInfoClient.npm(function (err, res) {
-                if (err) {
-                    info.version = 'N/A';
-                    self.logger.error('Could not obtain webgme-cyphy version info.');
-                } else {
-                    info.version = res.version;
-                }
-                self.smartClient.serverInfoClient.node(function (err, res) {
-                    if (err) {
-                        info.node = 'N/A';
-                        self.logger.error('Could not obtain node version.');
-                    } else {
-                        info.node = res.version;
-                    }
-                    callback(info);
-                });
-            });
-        });
+    WorkspaceController.prototype.removeTerritory = function (id) {
+        var self = this;
+        if (self.territories.hasOwnProperty(id)) {
+            self.smartClient.removeUI(self.territories[id].territoryId);
+            delete self.territories[id];
+            return true;
+        }
+        return false;
     };
 
     return WorkspaceController;
