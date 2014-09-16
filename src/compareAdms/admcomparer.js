@@ -1,8 +1,8 @@
 var adm2Object = require('./dependencies/adm2object.js');
-//var adm1 = adm2Object('./src/compareAdms/samples/d1.adm');
-//var adm2 = adm2Object('./src/compareAdms/samples/d2.adm');
-var adm1 = adm2Object('./src/compareAdms/samples/MyMassSpringDamper.adm');
-var adm2 = adm2Object('./src/compareAdms/samples/Wheel.adm');
+var adm1 = adm2Object('./src/compareAdms/samples/d1.adm');
+var adm2 = adm2Object('./src/compareAdms/samples/d2.adm');
+//var adm1 = adm2Object('./src/compareAdms/samples/MyMassSpringDamper.adm');
+//var adm2 = adm2Object('./src/compareAdms/samples/Wheel.adm');
 
 var formulas = [];
 var primitiveProperyInstances = [];
@@ -714,6 +714,9 @@ var compareAdms = function (adm1, adm2) {
             val2 = connectorComposition2_map[key2];
             connector2_compIds = val2.compositionId.split(" ");
 
+            compositionArray1 = [];
+            compositionArray2 = [];
+
             // number of ids in ConnectorComposition needs to match
             if (connector1_compIds.length !== connector2_compIds.length) {
                 result.success = false;
@@ -762,12 +765,12 @@ var compareAdms = function (adm1, adm2) {
                     compositionArray2.push(parentName2);
                 }
 
-                result.success = compareAllCompositionPairsInArrays(compositionArray1, compositionArray2);
+                result.success = compareAllCompositionPairsInArrays(compositionArray1.slice(0), compositionArray2.slice(0));
 
                 if (!result.success) {
                     parentName1 = connectorComposition1_map[refId1].parentName;
                     type = connectorComposition1_map[refId1].type;
-                    msg = type + " " + parentName1 + "does not connect to the same connections; they connect to: " + compositionArray1.toString() +
+                    msg = type + " " + parentName1 + " does not connect to the same connections; they connect to: " + compositionArray1.toString() +
                         " and " + compositionArray2.toString() + " respectively.";
                     result.messages.push(formatParentTree(val1.parent) + msg);
                     return result;
