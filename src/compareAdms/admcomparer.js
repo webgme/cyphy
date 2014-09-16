@@ -468,6 +468,8 @@ var compareAdms = function (adm1, adm2) {
 
     var compareProperties = function (property1, property2, parent) {
         var NAME = "@Name",
+            VALUE = "Value",
+            TYPE = "Property",
             result = {
                 success: true,
                 messages: []
@@ -476,6 +478,9 @@ var compareAdms = function (adm1, adm2) {
         if (property1[NAME] !== property2[NAME]) {
             result.success = false;
             result.messages.push(formatParentTree(parent) + "Name of Property does not match: " + property1[NAME] + ", " + property2[NAME]);
+        } else {
+            storeValueFlowInfo(property1[VALUE], parent.name, TYPE, parent, valueFlow1_map);
+            storeValueFlowInfo(property2[VALUE], parent.name, TYPE, parent, valueFlow2_map);
         }
 
         return result;
@@ -562,6 +567,7 @@ var compareAdms = function (adm1, adm2) {
      * Store information associated with each connector composition; used in second pass checking
      * @param element - the root element containing ConnectorComposition
      * @param parentName - name of the parent node containing ConnectorComposition
+     * @param type - type of element: connector or connector instance
      * @param parent - parent node, either a Connector or a ConnectorInstance
      * @param map - which map to store such info to
      */
@@ -581,10 +587,6 @@ var compareAdms = function (adm1, adm2) {
             parent: parent
         };
         map[id] = value;
-    };
-
-    var storeValueFlowInfo = function (element, parentName, parent, map) {
-
     };
 
 
@@ -615,35 +617,41 @@ var compareAdms = function (adm1, adm2) {
         }
     };
 
-    var comparePrimitivePropertyInstanceArrays = function (primPropIns1, primPropIns2, parent) {
-        var NAME = "@Name",
+    var comparePrimitivePropertyInstanceArrays = function (primitivePropertyInstanceArray1, primitivePropertyInstanceArray2, parent) {
+        var ID = "@IDinComponentModel",
             result = {
                 success: true,
                 messages: []
             },
             i,
+            ins1,
+            ins2,
             node;
-        if (primPropIns1.length !== primPropIns2.length) {
+
+        if (primitivePropertyInstanceArray1.length !== primitivePropertyInstanceArray2.length) {
             result.success = false;
-            result.messages.push(formatParentTree(parent) + "Number of PrimitivePropertyInstances does not match: " + primPropIns1.length + ", " + primPropIns2.length);
+            result.messages.push(formatParentTree(parent) + "Number of PrimitivePropertyInstances does not match: " + primitivePropertyInstanceArray1.length + ", " + primitivePropertyInstanceArray2.length);
         } else {
-            // sort the arrays first
-            primPropIns1.sort(function(a, b){
-                return a[NAME] > b[NAME];
+
+            // sort the arrays by ID first
+            primitivePropertyInstanceArray1.sort(function(a, b){
+                return a[ID] > b[ID];
             });
 
-            primPropIns2.sort(function(a, b){
-                return a[NAME] > b[NAME];
+            primitivePropertyInstanceArray2.sort(function(a, b){
+                return a[ID] > b[ID];
             });
 
-            for (i = 0; i < primPropIns1.length; i += 1) {
+            for (i = 0; i < primitivePropertyInstanceArray1.length; i += 1) {
+                ins1 = primitivePropertyInstanceArray1[i];
+                ins2 = primitivePropertyInstanceArray2[i];
                 node = {
-                    name: primPropIns1[i][NAME],
+                    name: "",
                     type: 'PrimitivePropertyInstance',
                     parent: parent,
                     children: []
                 };
-                result = comparePrimitivePropertyInstances(primPropIns1[i], primPropIns2[i], node);
+                result = comparePrimitivePropertyInstances(ins1, ins2, node);
                 if (!result.success) {
                     break;
                 }
@@ -655,23 +663,42 @@ var compareAdms = function (adm1, adm2) {
 
     var comparePrimitivePropertyInstances = function (primtivePropertyInstance1, primtivePropertyInstance2, node) {
         var ID = "@IDinComponentModel",
+            TYPE = "PrimitivePropertyInstance",
+            VALUE = "Value",
             result = {
                 success: true,
                 messages: []
             };
-        // todo: this returns true/false?
 
         if (primtivePropertyInstance1[ID] !== primtivePropertyInstance2[ID]) {
             result.success = false;
             result.messages.push(formatParentTree(parent) + "IDinComponentModel of PrimitiveInstances does not match: " + primtivePropertyInstance1[ID] + ", " + primtivePropertyInstance2[ID]);
         } else {
-            storeValueFlowInfo(primtivePropertyInstance1, node.parent.name, node.parent, valueFlow1_map);
-            storeValueFlowInfo(primtivePropertyInstance2, node.parent.name, node.parent, valueFlow2_map);
+            storeValueFlowInfo(primtivePropertyInstance1[VALUE], node.parent.name, TYPE, node.parent, valueFlow1_map);
+            storeValueFlowInfo(primtivePropertyInstance2[VALUE], node.parent.name, TYPE, node.parent, valueFlow2_map);
         }
 
         return result;
-
     };
+
+    var storeValueFlowInfo = function (valueFlowElement, parentName, type, parent, map) {
+        var VALUE = "Value",
+            UNIQUE_ID = "@IDinComponentModel",
+            ID = "@ID",
+            key, // id of value stored as key of LUT
+            value;
+
+        key = valueFlowElement[VALUE][ID];
+
+        value = {
+            propertyId: valueFlowElement[UNIQUE_ID],
+            type: type,
+            parentName: parentName,
+            parent: parent
+        };
+        map[key] = value;
+    };
+
 
 
     /**
