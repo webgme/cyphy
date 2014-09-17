@@ -15,18 +15,16 @@ var valueFlow2_map = {};
 var compareAdms = function (adm1, adm2) {
     var result = {
         success: true,
-        messages: []
+        messages: {
+            info: [],
+            warn: [],
+            error: []
+        }
     };
-    /* TODO: messages: {
-                info: [],
-                warn: [],
-                error: []
-            }
-    */
 
     if (JSON.stringify(adm1, null) === JSON.stringify(adm2, null)) {
         result.success = true;
-        result.messages.push("The given two adm designs are identical.");
+        result.messages.info.push("The given two adm designs are identical.");
     } else {
         // 1. first pass -- check all basic components for any differences
         result = compareRootContainer(adm1.Design, adm2.Design);
@@ -45,6 +43,8 @@ var compareAdms = function (adm1, adm2) {
     return result;
 };
 
+
+//<editor-fold desc="Containment Comparisons">
     var compareRootContainer = function (design1, design2) {
         var result,
             root1 = design1.RootContainer,
@@ -69,7 +69,11 @@ var compareAdms = function (adm1, adm2) {
     var compareContainerArrays = function (containerArray1, containerArray2, parent) {
         var result = {
                 success: true,
-                messages: []
+                messages: {
+                    info: [],
+                    warn: [],
+                    error: []
+                }
             },
             NAME = "@Name",
             len1 = containerArray1.length,
@@ -81,7 +85,7 @@ var compareAdms = function (adm1, adm2) {
 
         if (len1 !== len2) {
             result.success = false;
-            result.messages.push(formatParentTree(parent) + "Number of containers does not match: " + len1 + ", " + len2);
+            result.messages.warn.push(formatParentTree(parent) + "Number of containers does not match: " + len1 + ", " + len2);
         } else {
             // sort the arrays first
             containerArray1.sort(function(a, b){
@@ -102,7 +106,7 @@ var compareAdms = function (adm1, adm2) {
                     parent: parent,
                     children: []
                 };
-                result = compareContainers(container1, container2, node);
+                result = compareContainers(container1, container2, parent);
                 if (!result.success) {
                     break;
                 }
@@ -114,7 +118,11 @@ var compareAdms = function (adm1, adm2) {
     var compareContainers = function (container1, container2, parent) {
         var result = {
                 success: true,
-                messages: []
+                messages: {
+                    info: [],
+                    warn: [],
+                    error: []
+                }
             },
             XSI_TYPE = "@xsi:type",
             NAME = "@Name",
@@ -146,10 +154,10 @@ var compareAdms = function (adm1, adm2) {
 
         if (name1 !== name2) {
             result.success = false;
-            result.messages.push(formatParentTree(parent) + "Name of Containers does not match: " + name1 + ", " + name2);
+            result.messages.warn.push(formatParentTree(parent) + "Name of Containers does not match: " + name1 + ", " + name2);
         } else if (type1 !== type2) {
             result.success = false;
-            result.messages.push(formatParentTree(parent) + "Type of Containers " + name1 + " does not match: " + type1 + ", " + type2);
+            result.messages.warn.push(formatParentTree(parent) + "Type of Containers " + name1 + " does not match: " + type1 + ", " + type2);
         } else {
             // compare the container's child components
             for (i = 0; i < ELEMENTS.length; i += 1) {
@@ -163,7 +171,7 @@ var compareAdms = function (adm1, adm2) {
                     }
                 } else {
                     result.success = false;
-                    result.messages.push(formatParentTree(node) + "Not both containers have child element " + ELEMENTS[i]);
+                    result.messages.warn.push(formatParentTree(node) + "Not both containers have child element " + ELEMENTS[i]);
                     break;
                 }
             }
@@ -174,7 +182,11 @@ var compareAdms = function (adm1, adm2) {
     var compareComponentInstanceArrays = function (componentInstanceArray1, componentInstanceArray2, parent) {
         var result = {
                 success: true,
-                messages: []
+                messages: {
+                    info: [],
+                    warn: [],
+                    error: []
+                }
             },
             NAME = "@Name",
             len1 = componentInstanceArray1.length,
@@ -186,7 +198,7 @@ var compareAdms = function (adm1, adm2) {
 
         if (len1 !== len2) {
             result.success = false;
-            result.messages.push(formatParentTree(parent) + "Number of ComponentInstances does not match: " + len1 + ", " + len2);
+            result.messages.warn.push(formatParentTree(parent) + "Number of ComponentInstances does not match: " + len1 + ", " + len2);
         } else {
 
             // sort the arrays first
@@ -220,11 +232,14 @@ var compareAdms = function (adm1, adm2) {
     var compareComponentInstances = function (componentInstance1, componentInstance2, parent) {
         var result = {
                 success: true,
-                messages: []
+                messages: {
+                    info: [],
+                    warn: [],
+                    error: []
+                }
             },
             COMPONENT_ID = "@ComponentID",
             NAME = "@Name",
-            PRIM_PROP_INS = "PrimitivePropertyInstance",
             ELEMENTS = ["PrimitivePropertyInstance",
                         "ConnectorInstance"],
             i,
@@ -239,10 +254,10 @@ var compareAdms = function (adm1, adm2) {
 
         if (name1 !== name2) {
             result.success = false;
-            result.messages.push(formatParentTree(parent) + "Name of ComponentInstance does not match: " + name1 + ", " + name2);
+            result.messages.warn.push(formatParentTree(parent) + "Name of ComponentInstance does not match: " + name1 + ", " + name2);
         } else if (id1 !== id2) {
             result.success = false;
-            result.messages.push(formatParentTree(parent) + "ComponentID of ComponentInstance does not match: " + id1 + ", " + id2);
+            result.messages.warn.push(formatParentTree(parent) + "ComponentID of ComponentInstance does not match: " + id1 + ", " + id2);
         } else {
 
             // compare the instance's child components
@@ -257,18 +272,18 @@ var compareAdms = function (adm1, adm2) {
                     }
                 } else {
                     result.success = false;
-                    result.messages.push(formatParentTree(parent) + "Not both ComponentInstances have child element " + ELEMENTS[i]);
+                    result.messages.warn.push(formatParentTree(parent) + "Not both ComponentInstances have child element " + ELEMENTS[i]);
                     break;
                 }
             }
         }
 
 
-        if (componentInstance1.hasOwnProperty(PRIM_PROP_INS) === componentInstance2.hasOwnProperty(PRIM_PROP_INS)) {
-            if (componentInstance1.hasOwnProperty(PRIM_PROP_INS)) {
-                scanPrimitivePropertyInstanceArrays(componentInstance1[PRIM_PROP_INS], componentInstance2[PRIM_PROP_INS]);
-            }
-        }
+//        if (componentInstance1.hasOwnProperty(PRIM_PROP_INS) === componentInstance2.hasOwnProperty(PRIM_PROP_INS)) {
+//            if (componentInstance1.hasOwnProperty(PRIM_PROP_INS)) {
+//                scanPrimitivePropertyInstanceArrays(componentInstance1[PRIM_PROP_INS], componentInstance2[PRIM_PROP_INS]);
+//            }
+//        }
         return result;
     };
 
@@ -276,14 +291,18 @@ var compareAdms = function (adm1, adm2) {
         var NAME = "@Name",
             result = {
                 success: true,
-                messages: []
+                messages: {
+                    info: [],
+                    warn: [],
+                    error: []
+                }
             },
             i,
             node;
 
         if (connectorArray1.length !== connectorArray2.length) {
             result.success = false;
-            result.messages.push(formatParentTree(parent) + "Number of Connectors does not match: " + connectorArray1.length + ", " + connectorArray2.length);
+            result.messages.warn.push(formatParentTree(parent) + "Number of Connectors does not match: " + connectorArray1.length + ", " + connectorArray2.length);
         } else {
             // sort the arrays first
             connectorArray1.sort(function(a, b){
@@ -317,13 +336,17 @@ var compareAdms = function (adm1, adm2) {
             ELEMENT = "Role",
             result = {
                 success: true,
-                messages: []
+                messages: {
+                    info: [],
+                    warn: [],
+                    error: []
+                }
             },
             node;
 
         if (connector1[NAME] !== connector2[NAME]) {
             result.success = false;
-            result.messages.push(formatParentTree(parent) + "Name of Connectors does not match: " + connector1[NAME] + ", " + connector2[NAME]);
+            result.messages.warn.push(formatParentTree(parent) + "Name of Connectors does not match: " + connector1[NAME] + ", " + connector2[NAME]);
         } else {
             storeConnectorCompositionInfo(connector1, connector1[NAME], TYPE, parent, connectorComposition1_map);
             storeConnectorCompositionInfo(connector2, connector2[NAME], TYPE, parent, connectorComposition2_map);
@@ -334,7 +357,7 @@ var compareAdms = function (adm1, adm2) {
                     parent: parent,
                     children: []
                 };
-                result = compareRoleArrays(connector1[ELEMENT], connector2[ELEMENT], node);
+                result = compareRoleArrays(connector1[ELEMENT], connector2[ELEMENT], parent);
             }
         }
         return result;
@@ -345,12 +368,16 @@ var compareAdms = function (adm1, adm2) {
             i,
             result = {
                 success: true,
-                messages: []
+                messages: {
+                    info: [],
+                    warn: [],
+                    error: []
+                }
             },
             node;
         if (roleArray1.length !== roleArray2.length) {
             result.success = false;
-            result.messages.push(formatParentTree(parent) + "Number of Roles does not match: " + roleArray1.length + ", " + roleArray2.length);
+            result.messages.warn.push(formatParentTree(parent) + "Number of Roles does not match: " + roleArray1.length + ", " + roleArray2.length);
         } else {
             // sort the arrays first
             roleArray1.sort(function(a, b){
@@ -386,7 +413,11 @@ var compareAdms = function (adm1, adm2) {
             CAD = "cad",
             result = {
                 success: true,
-                messages: []
+                messages: {
+                    info: [],
+                    warn: [],
+                    error: []
+                }
             },
             key,
             type1,
@@ -411,16 +442,16 @@ var compareAdms = function (adm1, adm2) {
 
         if (role1[type1] !== role2[type2]) {
             result.success = false;
-            result.messages.push(formatParentTree(parent) + "Type of Role does not match: " + role1[type1] + ", " + role2[type2]);
+            result.messages.warn.push(formatParentTree(parent) + "Type of Role does not match: " + role1[type1] + ", " + role2[type2]);
         } else if (role1[type1] === MODELICA) {
             if (role1[CLASS] !== role2[CLASS]) {
                 result.success = false;
-                result.messages.push(formatParentTree(parent) + "Modelica Class of Role does not match: " + role1[CLASS] + ", " + role2[CLASS]);
+                result.messages.warn.push(formatParentTree(parent) + "Modelica Class of Role does not match: " + role1[CLASS] + ", " + role2[CLASS]);
             }
         } else if (role1[type1] === CAD) {
             if (role1[XSI_TYPE] !== role2[XSI_TYPE]) {
                 result.success = false;
-                result.messages.push(formatParentTree(parent) + "CAD Class of Role does not match: " + role1[XSI_TYPE] + ", " + role2[XSI_TYPE]);
+                result.messages.warn.push(formatParentTree(parent) + "CAD Class of Role does not match: " + role1[XSI_TYPE] + ", " + role2[XSI_TYPE]);
             }
         }
 
@@ -432,13 +463,17 @@ var compareAdms = function (adm1, adm2) {
             i,
             result = {
                 success: true,
-                messages: []
+                messages: {
+                    info: [],
+                    warn: [],
+                    error: []
+                }
             },
             node;
 
         if (propArray1.length !== propArray2.length) {
             result.success = false;
-            result.messages.push(formatParentTree(parent) + "Number of Properties does not match: " + propArray1.length + ", " + propArray2.length);
+            result.messages.warn.push(formatParentTree(parent) + "Number of Properties does not match: " + propArray1.length + ", " + propArray2.length);
         } else {
             // sort the arrays first
             propArray1.sort(function(a, b){
@@ -472,12 +507,16 @@ var compareAdms = function (adm1, adm2) {
             TYPE = "Property",
             result = {
                 success: true,
-                messages: []
+                messages: {
+                    info: [],
+                    warn: [],
+                    error: []
+                }
             };
 
         if (property1[NAME] !== property2[NAME]) {
             result.success = false;
-            result.messages.push(formatParentTree(parent) + "Name of Property does not match: " + property1[NAME] + ", " + property2[NAME]);
+            result.messages.warn.push(formatParentTree(parent) + "Name of Property does not match: " + property1[NAME] + ", " + property2[NAME]);
         } else {
             storeValueFlowInfo(property1[VALUE], parent.name, TYPE, parent, valueFlow1_map);
             storeValueFlowInfo(property2[VALUE], parent.name, TYPE, parent, valueFlow2_map);
@@ -498,14 +537,18 @@ var compareAdms = function (adm1, adm2) {
         var ID = "@IDinComponentModel",
             result = {
                 success: true,
-                messages: []
+                messages: {
+                    info: [],
+                    warn: [],
+                    error: []
+                }
             },
             i,
             node;
 
         if (connectorInstanceArray1.length !== connectorInstanceArray2.length) {
             result.success = false;
-            result.messages.push(formatParentTree(parent) + "Number of ConnectorInstances does not match: " + connectorInstanceArray1.length + ", " + connectorInstanceArray2.length);
+            result.messages.warn.push(formatParentTree(parent) + "Number of ConnectorInstances does not match: " + connectorInstanceArray1.length + ", " + connectorInstanceArray2.length);
         } else {
             // sort the arrays first
             connectorInstanceArray1.sort(function(a, b){
@@ -547,12 +590,16 @@ var compareAdms = function (adm1, adm2) {
             TYPE = 'ConnectorInstance',
             result = {
                 success: true,
-                messages: []
+                messages: {
+                    info: [],
+                    warn: [],
+                    error: []
+                }
             };
 
         if (connectorInstance1[ID] !== connectorInstance2[ID]) {
             result.success = false;
-            result.messages.push(formatParentTree(node), "IDinComponentModel of ConnectorInstances does not match: " + connectorInstance1[ID] + ", " + connectorInstance2[ID]);
+            result.messages.warn.push(formatParentTree(node), "IDinComponentModel of ConnectorInstances does not match: " + connectorInstance1[ID] + ", " + connectorInstance2[ID]);
         } else {
             storeConnectorCompositionInfo(connectorInstance1, node.parent.name, TYPE, node, connectorComposition1_map);
             storeConnectorCompositionInfo(connectorInstance2, node.parent.name, TYPE, node, connectorComposition2_map);
@@ -561,65 +608,15 @@ var compareAdms = function (adm1, adm2) {
         return result;
     };
 
-    /**
-     * Store information associated with each connector composition; used in second pass checking
-     * @param element - the root element containing ConnectorComposition
-     * @param parentName - name of the parent node containing ConnectorComposition
-     * @param type - type of element: connector or connector instance
-     * @param parent - parent node, either a Connector or a ConnectorInstance
-     * @param map - which map to store such info to
-     */
-    var storeConnectorCompositionInfo = function (element, parentName, type, parent, map) {
-        var CONNECTOR_COMPOSITION = "@ConnectorComposition",
-            ID = "@ID",
-            compositionId,
-            id,
-            value;
-
-        compositionId = element[CONNECTOR_COMPOSITION];
-        id = element[ID];
-        value = {
-            compositionId: compositionId,
-            type: type,
-            parentName: parentName,
-            parent: parent
-        };
-        map[id] = value;
-    };
-
-
-
-    /**
-     * store all primitive property instances in a LUT
-     * @param array1
-     * @param array2
-     */
-    var scanPrimitivePropertyInstanceArrays = function (array1, array2) {
-        var ID = "@IDinComponentModel",
-            TYPE = "PrimitivePropertyInstance",
-            VALUE = "Value",
-            VALUE_ID = "@ID",
-            VALUE_SRC = "@ValueSource",
-            EXP = "ValueExpression",
-            XSI_TYPE = "@xsi:type",
-            DERIVED = "DerivedValue",
-            i,
-            key,
-            value = {},
-            obj;
-        for (i = 0; i < array1.length; i += 1) {
-            obj = array1[i];
-            key = obj[ID];
-            value.type = TYPE;
-            value.obj = extractValues(value);
-        }
-    };
-
     var comparePrimitivePropertyInstanceArrays = function (primitivePropertyInstanceArray1, primitivePropertyInstanceArray2, parent) {
         var ID = "@IDinComponentModel",
             result = {
                 success: true,
-                messages: []
+                messages: {
+                    info: [],
+                    warn: [],
+                    error: []
+                }
             },
             i,
             ins1,
@@ -628,7 +625,7 @@ var compareAdms = function (adm1, adm2) {
 
         if (primitivePropertyInstanceArray1.length !== primitivePropertyInstanceArray2.length) {
             result.success = false;
-            result.messages.push(formatParentTree(parent) + "Number of PrimitivePropertyInstances does not match: " + primitivePropertyInstanceArray1.length + ", " + primitivePropertyInstanceArray2.length);
+            result.messages.warn.push(formatParentTree(parent) + "Number of PrimitivePropertyInstances does not match: " + primitivePropertyInstanceArray1.length + ", " + primitivePropertyInstanceArray2.length);
         } else {
 
             // sort the arrays by ID first
@@ -665,12 +662,16 @@ var compareAdms = function (adm1, adm2) {
             VALUE = "Value",
             result = {
                 success: true,
-                messages: []
+                messages: {
+                    info: [],
+                    warn: [],
+                    error: []
+                }
             };
 
         if (primtivePropertyInstance1[ID] !== primtivePropertyInstance2[ID]) {
             result.success = false;
-            result.messages.push(formatParentTree(parent) + "IDinComponentModel of PrimitiveInstances does not match: " + primtivePropertyInstance1[ID] + ", " + primtivePropertyInstance2[ID]);
+            result.messages.warn.push(formatParentTree(node) + "IDinComponentModel of PrimitiveInstances does not match: " + primtivePropertyInstance1[ID] + ", " + primtivePropertyInstance2[ID]);
         } else {
             storeValueFlowInfo(primtivePropertyInstance1[VALUE], node.name, TYPE, node, valueFlow1_map);
             storeValueFlowInfo(primtivePropertyInstance2[VALUE], node.name, TYPE, node, valueFlow2_map);
@@ -678,6 +679,198 @@ var compareAdms = function (adm1, adm2) {
 
         return result;
     };
+
+//</editor-fold>
+
+
+//<editor-fold desc="Connector Composition Storing and Comparing">
+/**
+     * Store information associated with each connector composition; used in second pass checking
+     * @param element - the root element containing ConnectorComposition
+     * @param parentName - name of the parent node containing ConnectorComposition
+     * @param type - type of element: connector or connector instance
+     * @param parent - parent node, either a Connector or a ConnectorInstance
+     * @param map - which map to store such info to
+     */
+    var storeConnectorCompositionInfo = function (element, parentName, type, parent, map) {
+        var CONNECTOR_COMPOSITION = "@ConnectorComposition",
+            ID = "@ID",
+            compositionId,
+            id,
+            value;
+
+        compositionId = element[CONNECTOR_COMPOSITION];
+        id = element[ID];
+        value = {
+            compositionId: compositionId,
+            type: type,
+            parentName: parentName,
+            parent: parent
+        };
+        map[id] = value;
+    };
+
+    /**
+     * After all elements have been scanned the first time for any discrepancies, compare each pair of ConnectorCompositions stored in the LUT
+     * @returns {{success: boolean, messages: Array}}
+     */
+    var compareConnectorComposition = function () {
+        var result = {
+                success: true,
+                messages: {
+                    info: [],
+                    warn: [],
+                    error: []
+                }
+            },
+            keys1 = Object.keys(connectorComposition1_map),
+            keys2 = Object.keys(connectorComposition2_map),
+            i,
+            j,
+            key1,
+            val1,
+            parentName1,
+            refId1,
+            id1Index,
+            key2,
+            val2,
+            parentName2,
+            refId2,
+            id2Index,
+            msg,
+            type,
+            connector1_compIds = [],
+            connector2_compIds = [],
+            compositionArray1,
+            compositionArray2;
+
+        for (i = 0; i < keys1.length; i += 1) {
+            // initialize local arrays storing the "connections" via compositionIDs
+            compositionArray1 = [];
+            compositionArray2 = [];
+
+            // each pair must have matching parentName
+            key1 = keys1[i];
+            val1 = connectorComposition1_map[key1];
+
+            connector1_compIds = (val1.compositionId === "") ? [] : val1.compositionId.split(" ");
+
+
+
+            key2 = keys2[i];
+            val2 = connectorComposition2_map[key2];
+            connector2_compIds = (val2.compositionId === "") ? [] : val2.compositionId.split(" ");
+
+
+            // number of ids in ConnectorComposition needs to match
+            if (connector1_compIds.length !== connector2_compIds.length) {
+                result.success = false;
+                result.messages.warn.push(formatParentTree(val1.parent) + "Does not have the same number of connections.");
+                return result;
+            } else {
+                for (j = 0; j < connector1_compIds.length; j += 1) {
+                    refId1 = connector1_compIds[j];
+                    refId2 = connector2_compIds[j];
+
+                    id1Index = keys1.indexOf(refId1);
+                    id2Index = keys2.indexOf(refId2);
+
+                    if (id1Index === -1) {
+                        result.success = false;
+                        result.messages.error.push(formatParentTree(val1.parent) + "Design 1 Connector referenced with ID: " + refId1 + " is not found: ");
+                        return result;
+                    }
+
+                    if (id2Index === -1) {
+                        result.success = false;
+                        result.messages.error.push(formatParentTree(val2.parent) + "Design 2 Connector referenced with ID: " + refId2 + " is not found: ");
+                        return result;
+                    }
+
+                    parentName1 = connectorComposition1_map[keys1[id1Index]].parentName;
+                    parentName2 = connectorComposition2_map[keys2[id2Index]].parentName;
+
+                    compositionArray1.push(parentName1);
+                    compositionArray2.push(parentName2);
+                }
+
+                result.success = compareAllCompositionPairsInArrays(compositionArray1.slice(0), compositionArray2.slice(0));
+
+                if (!result.success) {
+                    parentName1 = connectorComposition1_map[refId1].parentName;
+                    type = connectorComposition1_map[refId1].type;
+                    msg = type + " " + parentName1 + " does not connect to the same connections; they connect to: " + compositionArray1.toString() +
+                        " and " + compositionArray2.toString() + " respectively.";
+                    result.messages.warn.push(formatParentTree(val1.parent) + msg);
+                    return result;
+                }
+
+            }
+        }
+
+        return result;
+    };
+
+    /**
+     * When two component arrays have equal length, compare each pair of components
+     * success - if component array length number of pairs match
+     * fail - otherwise
+     * @param arr1
+     * @param arr2
+     */
+    var compareAllCompositionPairsInArrays = function (arr1, arr2) {
+        var TARGET = arr1.length,
+            counter = 0,
+            i,
+            j,
+            success = true;
+
+        for (i = 0; i < arr1.length; i += 1) {
+            for (j = 0; j < arr1.length; j += 1) {
+                if (arr1[i] === arr2[j]) {
+                    ++counter;
+                    arr1.splice(i, 1);
+                    arr2.splice(j, 1);
+                    --i;
+                    --j;
+                }
+            }
+        }
+
+        if (counter !== TARGET) {
+            success = false;
+        }
+
+        return success;
+    };
+//</editor-fold>
+
+    /**
+     * store all primitive property instances in a LUT
+     * @param array1
+     * @param array2
+     */
+    var scanPrimitivePropertyInstanceArrays = function (array1, array2) {
+        var ID = "@IDinComponentModel",
+            TYPE = "PrimitivePropertyInstance",
+            VALUE = "Value",
+            VALUE_ID = "@ID",
+            VALUE_SRC = "@ValueSource",
+            EXP = "ValueExpression",
+            XSI_TYPE = "@xsi:type",
+            DERIVED = "DerivedValue",
+            i,
+            key,
+            value = {},
+            obj;
+        for (i = 0; i < array1.length; i += 1) {
+            obj = array1[i];
+            key = obj[ID];
+            value.type = TYPE;
+            value.obj = extractValues(value);
+        }
+    };
+
 
     /**
      *
@@ -727,115 +920,6 @@ var compareAdms = function (adm1, adm2) {
     };
 
 
-    /**
-     * After all elements have been scanned the first time for any discrepancies, compare each pair of ConnectorCompositions stored in the LUT
-     * @returns {{success: boolean, messages: Array}}
-     */
-    var compareConnectorComposition = function () {
-        var result = {
-                success: true,
-                messages: []
-            },
-            keys1 = Object.keys(connectorComposition1_map),
-            keys2 = Object.keys(connectorComposition2_map),
-            i,
-            j,
-            key1,
-            val1,
-            parentName1,
-            refId1,
-            id1Index,
-            key2,
-            val2,
-            parentName2,
-            refId2,
-            id2Index,
-            msg,
-            type,
-            connector1_compIds = [],
-            connector2_compIds = [],
-            compositionArray1 = [],
-            compositionArray2 = [];
-
-        for (i = 0; i < keys1.length; i += 1) {
-            // each pair must have matching parentName
-            key1 = keys1[i];
-            val1 = connectorComposition1_map[key1];
-            connector1_compIds = val1.compositionId.split(" ");
-
-            key2 = keys2[i];
-            val2 = connectorComposition2_map[key2];
-            connector2_compIds = val2.compositionId.split(" ");
-
-            compositionArray1 = [];
-            compositionArray2 = [];
-
-            // number of ids in ConnectorComposition needs to match
-            if (connector1_compIds.length !== connector2_compIds.length) {
-                result.success = false;
-                result.messages.push(formatParentTree(val1.parent) + "Number of id references in ConnectorComposition does not match.");
-                return result;
-            } else {
-                // if one compositionID is empty string, the other compositionID is not, then return false
-
-                if (connector1_compIds.length === 1 && (connector1_compIds[0] === "" || connector2_compIds[0] === "")) {
-                    if (connector1_compIds[0] !== connector2_compIds[0]) {
-                        parentName1 = val1.parentName;
-                        result.success = false;
-                        if (connector1_compIds[0] === "") {
-                            msg = val1.type + " in design 1 does not connect to any connection";
-                        } else if (connector2_compIds[0] === "") {
-                            msg = val1.type + " in design 2 does not connect to any connection";
-                        }
-                        result.messages.push(formatParentTree(val1.parent) + msg);
-                        return result;
-                    } else {
-                        continue;
-                    }
-                }
-
-                for (j = 0; j < connector1_compIds.length; j += 1) {
-                    refId1 = connector1_compIds[j];
-                    refId2 = connector2_compIds[j];
-
-                    id1Index = keys1.indexOf(refId1);
-                    id2Index = keys2.indexOf(refId2);
-
-                    if (id1Index === -1) {
-                        result.success = false;
-                        result.messages.push(formatParentTree(val1.parent) + "Design 1 Connector referenced with ID: " + refId1 + " is not found: ");
-                        return result;
-                    }
-
-                    if (id2Index === -1) {
-                        result.success = false;
-                        result.messages.push(formatParentTree(val2.parent) + "Design 2 Connector referenced with ID: " + refId2 + " is not found: ");
-                        return result;
-                    }
-
-                    parentName1 = connectorComposition1_map[keys1[id1Index]].parentName;
-                    parentName2 = connectorComposition2_map[keys2[id2Index]].parentName;
-
-                    compositionArray1.push(parentName1);
-                    compositionArray2.push(parentName2);
-                }
-
-                result.success = compareAllCompositionPairsInArrays(compositionArray1.slice(0), compositionArray2.slice(0));
-
-                if (!result.success) {
-                    parentName1 = connectorComposition1_map[refId1].parentName;
-                    type = connectorComposition1_map[refId1].type;
-                    msg = type + " " + parentName1 + " does not connect to the same connections; they connect to: " + compositionArray1.toString() +
-                        " and " + compositionArray2.toString() + " respectively.";
-                    result.messages.push(formatParentTree(val1.parent) + msg);
-                    return result;
-                }
-
-            }
-        }
-
-        return result;
-    };
 
     var extractValues = function (valueObject) {
         var // define attribute names
@@ -951,38 +1035,6 @@ var compareAdms = function (adm1, adm2) {
 //    };
 
 
-    /**
-     * When two component arrays have equal length, compare each pair of components
-     * success - if component array length number of pairs match
-     * fail - otherwise
-     * @param arr1
-     * @param arr2
-     */
-    var compareAllCompositionPairsInArrays = function (arr1, arr2) {
-        var TARGET = arr1.length,
-            counter = 0,
-            i,
-            j,
-            success = true;
-
-        for (i = 0; i < arr1.length; i += 1) {
-            for (j = 0; j < arr1.length; j += 1) {
-                if (arr1[i] === arr2[j]) {
-                    ++counter;
-                    arr1.splice(i, 1);
-                    arr2.splice(j, 1);
-                    --i;
-                    --j;
-                }
-            }
-        }
-
-        if (counter !== TARGET) {
-            success = false;
-        }
-
-        return success;
-    };
 
     /**
      * When two component arrays have equal length, compare each pair of components
@@ -1003,7 +1055,11 @@ var compareAdms = function (adm1, adm2) {
             node,
             result = {
                 success: true,
-                messages: []
+                messages: {
+                    info: [],
+                    warn: [],
+                    error: []
+                }
             };
 
         for (i = 0; i < componentArray1.length; i += 1) {
