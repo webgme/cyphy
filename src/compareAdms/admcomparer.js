@@ -963,7 +963,7 @@ var compareAdms = function (adm1, adm2) {
             keyId2,
             srcId1,
             srcId2,
-            success = true;
+            success;
 
         // follow and compare all pairs of derived value flows
         for (i = 0; i < keys1.length; i += 1) {
@@ -1023,10 +1023,10 @@ var compareAdms = function (adm1, adm2) {
                 }
             }
         }
-
+        return result;
     };
 
-    var compareSimpleFormula = function (operand1, operand2) {
+    var compareSimpleFormulaOperands = function (operand1, operand2) {
         var operandArray1 = operand1 === "" ? [] : operand1.split(" "),
             operandArray2 = operand2 === "" ? [] : operand2.split(" "),
             result = {
@@ -1043,8 +1043,12 @@ var compareAdms = function (adm1, adm2) {
             result.messages.warn.push("Formulas have different numbers of operands"); // todo: maybe an error msg; more meaningful
         } else {
             // todo: each of these have to go back to follow value flow
+            result.success = compareAllPairsOfDerivedValuePairs(operandArray1.length, operandArray1, operandArray2);
+            if (!result.success) {
+                result.messages.warn.push("Operands of formula do not match"); // todo: more meaningful messages here
+            }
         }
-
+        return result;
     };
 //</editor-fold>
 
