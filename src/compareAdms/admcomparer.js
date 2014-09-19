@@ -1,16 +1,21 @@
 var adm2Object = require('./dependencies/adm2object.js');
-var adm1 = adm2Object('./src/compareAdms/samples/d1.adm');
-var adm2 = adm2Object('./src/compareAdms/samples/d2.adm');
-//var adm1 = adm2Object('./src/compareAdms/samples/MyMassSpringDamper.adm');
-//var adm2 = adm2Object('./src/compareAdms/samples/Wheel.adm');
+//var adm1 = adm2Object('./src/compareAdms/samples/m3.adm');
+//var adm2 = adm2Object('./src/compareAdms/samples/m2.adm');
+var adm1 = adm2Object('./src/compareAdms/samples/MyMassSpringDamper.adm');
+var adm2 = adm2Object('./src/compareAdms/samples/Wheel.adm');
 
-var formulas = [];
+var formula1 = [];
+var formula2 = [];
 var primitiveProperyInstances = [];
 var properties = [];
 var connectorComposition1_map = {};
 var connectorComposition2_map = {};
 var valueFlow1_map = {};
 var valueFlow2_map = {};
+var derivedValue1_map = {};
+var derivedValue2_map = {};
+var DESIGN1 = 1;
+var DESIGN2 = 2;
 
 var compareAdms = function (adm1, adm2) {
     var result = {
@@ -35,7 +40,7 @@ var compareAdms = function (adm1, adm2) {
 
             // 3. third pass -- check against all value flows (formulas, properties)
             if (result.success) {
-
+                result = compareValueFlow();
             }
         }
     }
@@ -130,13 +135,15 @@ var compareAdms = function (adm1, adm2) {
                 "Container",
                 "ComponentInstance",
                 "Connector",
-                "Property"
+                "Property",
+                "Formula"
             ],
             FUNCTIONS = [
                 compareContainerArrays,
                 compareComponentInstanceArrays,
                 compareConnectorArrays,
-                comparePropertyArrays
+                comparePropertyArrays,
+                processFormulaArrays
             ],
             i,
             type1 = container1[XSI_TYPE],
@@ -518,20 +525,19 @@ var compareAdms = function (adm1, adm2) {
             result.success = false;
             result.messages.warn.push(formatParentTree(parent) + "Name of Property does not match: " + property1[NAME] + ", " + property2[NAME]);
         } else {
-            storeValueFlowInfo(property1[VALUE], parent.name, TYPE, parent, valueFlow1_map);
-            storeValueFlowInfo(property2[VALUE], parent.name, TYPE, parent, valueFlow2_map);
+            storeValueFlowInfo(property1[VALUE], parent.name, TYPE, parent, DESIGN1);
+            storeValueFlowInfo(property2[VALUE], parent.name, TYPE, parent, DESIGN2);
         }
 
         return result;
     };
 
     /**
-     * Compare sorted pairs of connector instances
-     * fail - if lengths do not match
+     * Compare sorted pairs of connector instances: fail - if lengths do not match
      * @param connectorInstanceArray1
      * @param connectorInstanceArray2
      * @param parent
-     * @returns {{success: boolean, messages: Array}}
+     * @returns {{success: boolean, messages: {info: Array, warn: Array, error: Array}}}
      */
     var compareConnectorInstanceArrays = function (connectorInstanceArray1, connectorInstanceArray2, parent) {
         var ID = "@IDinComponentModel",
@@ -577,13 +583,12 @@ var compareAdms = function (adm1, adm2) {
     };
 
     /**
-     * Comparing two connector instances
-     * fail - if IDinComponentModel does not match
+     * Comparing two connector instances - fail if IDinComponentModel does not match
      * otherwise - store each ID, ConnectorComposition, and parent name in ComponentInstance
      * @param connectorInstance1
      * @param connectorInstance2
-     * @param node: stores current node information
-     * @returns {{success: boolean, messages: Array}}
+     * @param node - stores current node information
+     * @returns {{success: boolean, messages: {info: Array, warn: Array, error: Array}}}
      */
     var compareConnectorInstances = function (connectorInstance1, connectorInstance2, node) {
         var ID = "@IDinComponentModel",
@@ -641,7 +646,7 @@ var compareAdms = function (adm1, adm2) {
                 ins1 = primitivePropertyInstanceArray1[i];
                 ins2 = primitivePropertyInstanceArray2[i];
                 node = {
-                    name: primitivePropertyInstanceArray1[ID], // a way to identify the instance we are looking at
+                    name: primitivePropertyInstanceArray1[i][ID], // a way to identify the instance we are looking at
                     type: 'PrimitivePropertyInstance',
                     parent: parent,
                     children: []
@@ -673,8 +678,8 @@ var compareAdms = function (adm1, adm2) {
             result.success = false;
             result.messages.warn.push(formatParentTree(node) + "IDinComponentModel of PrimitiveInstances does not match: " + primtivePropertyInstance1[ID] + ", " + primtivePropertyInstance2[ID]);
         } else {
-            storeValueFlowInfo(primtivePropertyInstance1[VALUE], node.name, TYPE, node, valueFlow1_map);
-            storeValueFlowInfo(primtivePropertyInstance2[VALUE], node.name, TYPE, node, valueFlow2_map);
+            storeValueFlowInfo(primtivePropertyInstance1[VALUE], node.name, TYPE, node, DESIGN1);
+            storeValueFlowInfo(primtivePropertyInstance2[VALUE], node.name, TYPE, node, DESIGN2);
         }
 
         return result;
@@ -712,7 +717,7 @@ var compareAdms = function (adm1, adm2) {
 
     /**
      * After all elements have been scanned the first time for any discrepancies, compare each pair of ConnectorCompositions stored in the LUT
-     * @returns {{success: boolean, messages: Array}}
+     * @returns {{success: boolean, messages: {info: Array, warn: Array, error: Array}}}
      */
     var compareConnectorComposition = function () {
         var result = {
@@ -804,7 +809,6 @@ var compareAdms = function (adm1, adm2) {
                     result.messages.warn.push(formatParentTree(val1.parent) + msg);
                     return result;
                 }
-
             }
         }
 
@@ -833,6 +837,7 @@ var compareAdms = function (adm1, adm2) {
                     arr2.splice(j, 1);
                     --i;
                     --j;
+                    break;
                 }
             }
         }
@@ -845,116 +850,203 @@ var compareAdms = function (adm1, adm2) {
     };
 //</editor-fold>
 
-    /**
-     * store all primitive property instances in a LUT
-     * @param array1
-     * @param array2
-     */
-    var scanPrimitivePropertyInstanceArrays = function (array1, array2) {
-        var ID = "@IDinComponentModel",
-            TYPE = "PrimitivePropertyInstance",
-            VALUE = "Value",
-            VALUE_ID = "@ID",
-            VALUE_SRC = "@ValueSource",
-            EXP = "ValueExpression",
-            XSI_TYPE = "@xsi:type",
-            DERIVED = "DerivedValue",
-            i,
-            key,
-            value = {},
-            obj;
-        for (i = 0; i < array1.length; i += 1) {
-            obj = array1[i];
-            key = obj[ID];
-            value.type = TYPE;
-            value.obj = extractValues(value);
-        }
-    };
-
-
+//<editor-fold desc="Compare Value Flows">
     /**
      *
      * @param valueFlowElement - Value element of either a PrimitivePropertyInstance or a Property
      * @param parentIdentifier - Name of a Property or IDinComponentModel of a PrimitivePropertyInstance
      * @param type - either a PrimitivePropertyInstance value or a Property value
      * @param parent - the parent node of Value element
-     * @param map - which design map to store info to
+     * @param design - which design map to store info to
      */
-    var storeValueFlowInfo = function (valueFlowElement, parentIdentifier, type, parent, map) {
-        var UNIQUE_ID = "@IDinComponentModel",
-            VALUE_EXP = "ValueExpression",
-            XSI_TYPE = "@xsi:type",
+    var storeValueFlowInfo = function (valueFlowElement, parentIdentifier, type, parent, design) {
+        var VALUE_EXP = "ValueExpression",
+            ID = "@ID",
+            key, // id of value stored as key of LUT
+            value = {},
+            valueFlowMap = design === DESIGN1 ? valueFlow1_map : valueFlow2_map,
+            derivedValueMap = design === DESIGN1 ? derivedValue1_map : derivedValue2_map;
+
+        key = valueFlowElement[ID];
+
+        value.parentIdentifier = parentIdentifier; // value to be compared to see if two values are the same
+
+        // if ValueExpression exists within a Value element
+        if (valueFlowElement[VALUE_EXP]) {
+            value = storeValueExpression(key, value, valueFlowElement[VALUE_EXP], derivedValueMap);
+        }
+        valueFlowMap[key] = value;
+    };
+
+    var storeValueExpression = function (key, value, valueExpression, derivedValueMap) {
+        var XSI_TYPE = "@xsi:type",
             FIXED = "FixedValue",
             PARAM = "ParametricValue",
             DERIVED = "DerivedValue",
-            xsi,
-            Value = "Value",
-            ID = "@ID",
-            key, // id of value stored as key of LUT
-            value;
-
-        key = valueFlowElement[ID];
-        // if ValueExpression exists within a Value element
-        if (valueFlowElement[VALUE_EXP]) {
-            xsi = valueFlowElement[VALUE_EXP][XSI_TYPE];
-
-            if (xsi.indexOf(FIXED) > -1) {
-                // 1. if ValueExpression is a FixedValue - Identifier is the Value of this ValueExpression.
-
-            } else if (xsi.indexOf(PARAM) > -1) {
-                // 2. ValueExpression is ParametricValue - Is end when ValueExpression/AssignedValue is FixedValue- Identifier is the Value of this AssignedValue.
-
-            } else if (xsi.indexOf(DERIVED) > -1) {
-                // 3. ValueExpression is DerivedValue - its source needs to be stored and tracked
-
-            }
-        }
-
-        value = {
-            propertyId: valueFlowElement[UNIQUE_ID],
-            type: type,
-            parentName: parentIdentifier,
-            parent: parent
-        };
-        map[key] = value;
-    };
-
-
-
-    var extractValues = function (valueObject) {
-        var // define attribute names
-            ID = "@ID",
-            TYPE = "@xsi:type",
-            // define element tag names
-            SOURCE = "ValueSource",
-            EXP = "ValueExpression",
             VALUE = "Value",
-            ASSIGNED = "AssignedValue",
-            // define default const values
-            DERIVED = "DerivedValue",
-            FIXED = "FixedValue",
-            PARAMETRIC = "ParametricValue",
-            retObj = {};
+            VALUE_SOURCE = "@ValueSource",
+            ASSIGNED_VALUE = "AssignedValue",
+            xsi,
+            valueSrc;
 
-        retObj.id = valueObject[ID];
-        if (valueObject.hasOwnProperty(EXP)) {
-            if (TYPE.indexOf(DERIVED) > -1) {
-                retObj.valueSource = valueObject[EXP][SOURCE];
-                // todo: start tracking valueflow... ************************************************
-            } else if (TYPE.indexOf(FIXED) > -1) {
-                // todo: if tag doesn't exist, print error message
-                retObj.fixedValue = valueObject[EXP][VALUE];
-            } else if (TYPE.indexOf(PARAMETRIC) > -1) {
-                // todo: if tag doesn't exist, print error message
+        xsi = valueExpression[XSI_TYPE];
 
-                // todo: retObj.assignedValue = valueObject[EXP][ASSIGNED];
-                // todo: this might be recursive..........
+        if (xsi.indexOf(FIXED) > -1) {
+            // 1. if ValueExpression is a FixedValue - Identifier is the Value of this ValueExpression.
+            value.fixed = valueExpression[VALUE];
 
+        } else if (xsi.indexOf(PARAM) > -1) {
+            // 2. ValueExpression is ParametricValue - Is end when ValueExpression/AssignedValue is FixedValue- Identifier is the Value of this AssignedValue.
+            value.expression = {};
+            value.expression = storeValueExpression(key, value.expression, valueExpression[ASSIGNED_VALUE], derivedValueMap);
+
+        } else if (xsi.indexOf(DERIVED) > -1) {
+            // 3. ValueExpression is DerivedValue - its source needs to be stored and tracked
+            valueSrc = valueExpression[VALUE_SOURCE];
+            derivedValueMap[key] = valueSrc; // store derived value sources and its identifier to map
+            // todo: next pass compare all pairs stored in derivedValueMaps
+        }
+        return value;
+    };
+
+    var processFormulaArrays = function (formulaArray1, formulaArray2, parent) {
+        storeFormulaInfo(formulaArray1, parent.name);
+        storeFormulaInfo(formulaArray2, parent.name);
+    };
+
+    var storeFormulaInfo = function (formulaArray, parentIdentifier) {
+        var TYPE = "@xsi:type",
+            ID = "@ID",
+            OPERATION = "@Operation",
+            OPERAND = "@Operand",
+            i,
+            key,
+            value = {};
+        for (i = 0; i < formulaArray; i += 1) {
+            key = formulaArray[i][ID];
+            value.parentIdentifier = parentIdentifier;
+            value.formula = {};
+            value.formula.type = formulaArray[i][TYPE];
+            value.formula.operation = formulaArray[i][OPERATION];
+            value.formula.operand = formulaArray[i][OPERAND];
+            valueFlow1_map[key] = value;
+        }
+    };
+
+    var compareValueFlow = function () {
+        var keyLen1 = Object.keys(derivedValue1_map).length,
+            keyLen2 = Object.keys(derivedValue2_map).length,
+            result = {
+                success: true,
+                messages: {
+                    info: [],
+                    warn: [],
+                    error: []
+                }
+            };
+
+        if (keyLen1 !== keyLen2) {
+            result.success = false;
+            result.messages.warn.push("Designs do not have the same number of derived properties"); //todo: what's a meaningful message?
+        } else {
+            result.success = compareAllPairsOfDerivedValuePairs(keyLen1, Object.keys(derivedValue1_map).slice(0), Object.keys(derivedValue2_map).slice(0));
+            result.messages.warn.push("The derived values have different sources"); // todo: add a message here
+        }
+        return result;
+    };
+
+    var compareAllPairsOfDerivedValuePairs = function (target, keys1, keys2) {
+        var i,
+            j,
+            counter = 0,
+            keyId1,
+            keyId2,
+            srcId1,
+            srcId2,
+            success = true;
+
+        // follow and compare all pairs of derived value flows
+        for (i = 0; i < keys1.length; i += 1) {
+            for (j = 0; j < keys1.length; j += 1) {
+                keyId1 = keys1[i]; // value ID of derived property
+                keyId2 = keys2[j]; // value ID of derived property
+                srcId1 = derivedValue1_map[keyId1]; // valueSource of derived property
+                srcId2 = derivedValue2_map[keyId1]; // valueSource of derived property
+
+                // if value id points to the same parentIdentifier && valueSource points to the source with the same parent identifier
+                if (valueFlow1_map[keyId1].parentIdentifier === valueFlow2_map[keyId2].parentIdentifier
+                        && valueFlow1_map[srcId1].parentIdentifier === valueFlow2_map[srcId2].parentIdentifier) {
+                    ++counter;
+                    keys1.splice(i, 1);
+                    keys2.splice(j, 1);
+                    --i;
+                    --j;
+                    if (valueFlow1_map[srcId1].hasOwnProperty("formula") || valueFlow2_map[srcId2].hasOwnProperty("formula")) {
+                        compareFormulas(srcId1, srcId2);
+                    }
+                    break;
+                }
             }
         }
 
-        return retObj;
+        if (counter !== target) {
+            success = false;
+        }
+        return success;
     };
+
+    var compareFormulas = function (formulaId1, formulaId2) {
+        var SIMPLE = "SimpleFormula",
+            formula1,
+            formula2,
+            result = {
+                success: true,
+                messages: {
+                    info: [],
+                    warn: [],
+                    error: []
+                }
+            };
+
+        if (valueFlow1_map[formulaId1].hasOwnProperty("formula") !== valueFlow2_map[formulaId2].hasOwnProperty("formula")) {
+            result.success = false;
+            result.messages.warn.push("Not matching formulas"); // todo: more meaningful message
+        } else {
+            formula1 = valueFlow1_map[formulaId1];
+            formula2 = valueFlow2_map[formulaId2];
+            if (formula1.formula.type.indexOf("SIMPLE") > -1 && formula1.formula.type === formula2.formula.type) {
+                if (formula1.formula.operation !== formula2.formula.operation) {
+                    result.success = false;
+                    result.messages.warn.push("Mismatching operations"); // todo: more meaningful msg
+                } else {
+                    result = compareSimpleFormulaOperands(formula1.formula.operand, formula2.formula.operand);
+                }
+            }
+        }
+
+    };
+
+    var compareSimpleFormula = function (operand1, operand2) {
+        var operandArray1 = operand1 === "" ? [] : operand1.split(" "),
+            operandArray2 = operand2 === "" ? [] : operand2.split(" "),
+            result = {
+                success: true,
+                messages: {
+                    info: [],
+                    warn: [],
+                    error: []
+                }
+            };
+
+        if (operandArray1.length !== operandArray2.length) {
+            result.success = false;
+            result.messages.warn.push("Formulas have different numbers of operands"); // todo: maybe an error msg; more meaningful
+        } else {
+            // todo: each of these have to go back to follow value flow
+        }
+
+    };
+//</editor-fold>
 
 
     /**
@@ -1077,6 +1169,7 @@ var compareAdms = function (adm1, adm2) {
                     componentArray2.splice(j, 1);
                     --i;
                     --j;
+                    break;
                 }
             }
         }
