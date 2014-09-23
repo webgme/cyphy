@@ -978,20 +978,6 @@ var storePropertyValuePair = function (element1, element2, parent) {
                     result.messages.error.push(formatParentTree(parent1) + "Value type does not match.");
                     return result;
                 } else {
-//                    if (val1.type === FIXED) {
-//                        if (val1.value !== val2.value) {
-//                            result.success = false;
-//                            parent1 = propertyMap1[key1];
-//                            result.messages.error.push(formatParentTree(parent1) + "Fixed value does not match.");
-//                            return result;
-//                        }
-//                    } else if (val1.type === DERIVED) {
-//                        result.success = compareDerivedValue(key1, key2, val1, val2);
-//                    } else if (val1.type === PARAM) {
-//                        compareParametricValue();
-//                    } else {
-//                        console.log("Some exception occurred");
-//                    }
                     val1 = getEndValue(key1, valuesToCompare1_map, propertyMap1);
                     val2 = getEndValue(key2, valuesToCompare2_map, propertyMap2);
 
@@ -1032,8 +1018,7 @@ var storePropertyValuePair = function (element1, element2, parent) {
             DERIVED = "DerivedValue",
             FIXED = "FixedValue",
             PARAM = "ParametricValue",
-            ASSIGNED = "AssignedValue",
-            VALUE = "Value";
+            ASSIGNED = "AssignedValue";
 
         if (valueType === FIXED) {
             endVal = {
