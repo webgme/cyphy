@@ -4,22 +4,13 @@ var adm2 = adm2Object('./src/compareAdms/samples/dhsID.adm');
 //var adm1 = adm2Object('./src/compareAdms/samples/MyMassSpringDamper.adm');
 //var adm2 = adm2Object('./src/compareAdms/samples/Wheel.adm');
 
-var formula1 = [];
-var formula2 = [];
-var primitiveProperyInstances = [];
 var properties = [];
 var connectorComposition1_map = {};
 var connectorComposition2_map = {};
-var valueFlow1_map = {};
-var valueFlow2_map = {};
 var valuesToCompare1_map = {};
 var valuesToCompare2_map = {};
-var DESIGN1 = 1;
-var DESIGN2 = 2;
 var propertyMap1 = {};
 var propertyMap2 = {};
-var keysToCheck1 = [];
-var keysToCheck2 = [];
 
 var compareAdms = function (adm1, adm2) {
     var result = {
@@ -851,9 +842,9 @@ var compareAdms = function (adm1, adm2) {
     };
 //</editor-fold>
 
-//<editor-fold desc="Compare Value Flows">
 
-    var storePropertyValuePair = function (element1, element2, parent) {
+//<editor-fold desc="Compare Value Flow">
+var storePropertyValuePair = function (element1, element2, parent) {
         var EXP = "ValueExpression";
 
         if (element1.hasOwnProperty(EXP) || element2.hasOwnProperty(EXP)) {
@@ -864,7 +855,6 @@ var compareAdms = function (adm1, adm2) {
             storePropertyValue(element2, parent, propertyMap2, valuesToCompare2_map, false);
         }
     };
-
 
     /**
      * store property ID with its parent node (and expression if any) to a LUT
@@ -916,6 +906,35 @@ var compareAdms = function (adm1, adm2) {
             valuesToCheckMap[key] = value;
         }
     };
+
+
+    var processFormulaArrays = function (formulaArray1, formulaArray2, parent) {
+        var result = {
+            success: true,
+            messages: {
+                info: [],
+                warn: [],
+                error: []
+            }
+        };
+        storeFormulaInfo(formulaArray1);
+        storeFormulaInfo(formulaArray2);
+
+        return result;
+    };
+
+    // todo: formulas stored as undefined for now
+    var storeFormulaInfo = function (formulaArray) {
+        var ID = "@ID",
+            i,
+            key,
+            value = {};
+        for (i = 0; i < formulaArray; i += 1) {
+            key = formulaArray[i][ID];
+            value = undefined;
+        }
+    };
+
 
     /**
      * For each pair of keys in keysToCheck, compare their value flows stored in value
@@ -998,36 +1017,8 @@ var compareAdms = function (adm1, adm2) {
         return result;
     };
 
-    var compareDerivedValue = function (key1, key2, val1, val2) {
-//        var success = true;
-//        if (val1.value === undefined || val2.value === undefined) {
-//            result.success = false;
-//            parent1 = propertyMap1[key1];
-//            result.messages.warn.push(formatParentTree(parent1) + "Derived value does not have a source."); // todo: a more meaningful msg
-////                            return result;
-//        } else {
-//            parent1 = propertyMap1[val1.value];
-//            parent2 = propertyMap2[val2.value];
-//
-//            if (!parent1 || !parent2) {
-//                result.success = false;
-//                parent1 = propertyMap1[key1];
-//                result.messages.warn.push(formatParentTree(parent1) + "Derived value source is undefined."); // todo: a more meaningful msg
-//                // todo: formula also has undefined value
-////                                return result;
-//            } else if (parent1.name !== parent2.name) {
-//                result.success = false;
-//                parent1 = propertyMap1[key1];
-//                result.messages.error.push(formatParentTree(parent1) + "Values come from different sources: " + parent1.name + ", " + parent2.name + " respectively.");
-//                return result;
-//            }
-//        }
-//        return success;
-
-    };
-
     /**
-     *
+     * Recursively get the end value following a value flow starting with key in valuesToCheckMap
      * @param key
      * @param valuesToCheckMap
      * @param propertyMap
@@ -1109,232 +1100,6 @@ var compareAdms = function (adm1, adm2) {
     };
 
 
-//    /**
-//     *
-//     * @param valueFlowElement - Value element of either a PrimitivePropertyInstance or a Property
-//     * @param parentIdentifier - Name of a Property or IDinComponentModel of a PrimitivePropertyInstance
-//     * @param type - either a PrimitivePropertyInstance value or a Property value
-//     * @param parent - the parent node of Value element
-//     * @param design - which design map to store info to
-//     */
-//    var storeValueFlowInfo = function (valueFlowElement, parentIdentifier, type, parent, design) {
-//        var VALUE_EXP = "ValueExpression",
-//            ID = "@ID",
-//            key, // id of value stored as key of LUT
-//            value = {},
-//            valueFlowMap = design === DESIGN1 ? valueFlow1_map : valueFlow2_map,
-//            derivedValueMap = design === DESIGN1 ? valuesToCompare1_map : valuesToCompare2_map;
-//
-//        key = valueFlowElement[ID];
-//
-//        value.parentIdentifier = parentIdentifier; // value to be compared to see if two values are the same
-//
-//        // if ValueExpression exists within a Value element
-//        if (valueFlowElement[VALUE_EXP]) {
-//            value = storeValueExpression(key, value, valueFlowElement[VALUE_EXP], derivedValueMap);
-//        }
-//        valueFlowMap[key] = value;
-//    };
-//
-//    var storeValueExpression = function (key, value, valueExpression, derivedValueMap) {
-//        var XSI_TYPE = "@xsi:type",
-//            FIXED = "FixedValue",
-//            PARAM = "ParametricValue",
-//            DERIVED = "DerivedValue",
-//            VALUE = "Value",
-//            VALUE_SOURCE = "@ValueSource",
-//            ASSIGNED_VALUE = "AssignedValue",
-//            xsi,
-//            valueSrc;
-//
-//        xsi = valueExpression[XSI_TYPE];
-//
-//        if (xsi.indexOf(FIXED) > -1) {
-//            // 1. if ValueExpression is a FixedValue - Identifier is the Value of this ValueExpression.
-//            value.fixed = valueExpression[VALUE];
-//
-//        } else if (xsi.indexOf(PARAM) > -1) {
-//            // 2. ValueExpression is ParametricValue - Is end when ValueExpression/AssignedValue is FixedValue- Identifier is the Value of this AssignedValue.
-//            value.expression = {};
-//            value.expression = storeValueExpression(key, value.expression, valueExpression[ASSIGNED_VALUE], derivedValueMap);
-//
-//        } else if (xsi.indexOf(DERIVED) > -1) {
-//            // 3. ValueExpression is DerivedValue - its source needs to be stored and tracked
-//            valueSrc = valueExpression[VALUE_SOURCE];
-//            derivedValueMap[key] = valueSrc; // store derived value sources and its identifier to map
-//            // todo: next pass compare all pairs stored in derivedValueMaps
-//        }
-//        return value;
-//    };
-
-    var processFormulaArrays = function (formulaArray1, formulaArray2, parent) {
-        var result = {
-                success: true,
-                messages: {
-                    info: [],
-                    warn: [],
-                    error: []
-                }
-            };
-        storeFormulaInfo(formulaArray1, parent.name);
-        storeFormulaInfo(formulaArray2, parent.name);
-
-        return result;
-    };
-
-    // todo: formulas stored as undefined for now
-    var storeFormulaInfo = function (formulaArray, parentIdentifier) {
-        var ID = "@ID",
-            i,
-            key,
-            value = {};
-        for (i = 0; i < formulaArray; i += 1) {
-            key = formulaArray[i][ID];
-            value = undefined;
-        }
-    };
-
-//    var storeFormulaInfo = function (formulaArray, parentIdentifier) {
-//        var TYPE = "@xsi:type",
-//            ID = "@ID",
-//            OPERATION = "@Operation",
-//            OPERAND = "@Operand",
-//            i,
-//            key,
-//            value = {};
-//        for (i = 0; i < formulaArray; i += 1) {
-//            key = formulaArray[i][ID];
-//            value.parentIdentifier = parentIdentifier;
-//            value.formula = {};
-//            value.formula.type = formulaArray[i][TYPE];
-//            value.formula.operation = formulaArray[i][OPERATION];
-//            value.formula.operand = formulaArray[i][OPERAND];
-//            valueFlow1_map[key] = value;
-//        }
-//    };
-//
-//    var compareValueFlow = function () {
-//
-//    };
-//    var compareValueFlow = function () {
-//        var keyLen1 = Object.keys(valuesToCompare1_map).length,
-//            keyLen2 = Object.keys(valuesToCompare2_map).length,
-//            result = {
-//                success: true,
-//                messages: {
-//                    info: [],
-//                    warn: [],
-//                    error: []
-//                }
-//            };
-//
-//        if (keyLen1 !== keyLen2) {
-//            result.success = false;
-//            result.messages.warn.push("Designs do not have the same number of derived properties"); //todo: what's a meaningful message?
-//        } else {
-//            result.success = compareAllPairsOfDerivedValuePairs(keyLen1, Object.keys(valuesToCompare1_map).slice(0), Object.keys(valuesToCompare2_map).slice(0));
-//            result.messages.warn.push("The derived values have different sources"); // todo: add a message here
-//        }
-//        return result;
-//    };
-//    var compareAllPairsOfDerivedValuePairs = function (target, keys1, keys2) {
-//        var i,
-//            j,
-//            counter = 0,
-//            keyId1,
-//            keyId2,
-//            srcId1,
-//            srcId2,
-//            success;
-//
-//        // follow and compare all pairs of derived value flows
-//        for (i = 0; i < keys1.length; i += 1) {
-//            for (j = 0; j < keys1.length; j += 1) {
-//                keyId1 = keys1[i]; // value ID of derived property
-//                keyId2 = keys2[j]; // value ID of derived property
-//                srcId1 = valuesToCompare1_map[keyId1]; // valueSource of derived property
-//                srcId2 = valuesToCompare2_map[keyId1]; // valueSource of derived property
-//
-//                // if value id points to the same parentIdentifier && valueSource points to the source with the same parent identifier
-//                if (valueFlow1_map[keyId1].parentIdentifier === valueFlow2_map[keyId2].parentIdentifier
-//                        && valueFlow1_map[srcId1].parentIdentifier === valueFlow2_map[srcId2].parentIdentifier) {
-//                    ++counter;
-//                    keys1.splice(i, 1);
-//                    keys2.splice(j, 1);
-//                    --i;
-//                    --j;
-//                    if (valueFlow1_map[srcId1].hasOwnProperty("formula") || valueFlow2_map[srcId2].hasOwnProperty("formula")) {
-//                        compareFormulas(srcId1, srcId2);
-//                    }
-//                    break;
-//                }
-//            }
-//        }
-//
-//        if (counter !== target) {
-//            success = false;
-//        }
-//        return success;
-//    };
-//
-//    var compareFormulas = function (formulaId1, formulaId2) {
-//        var SIMPLE = "SimpleFormula",
-//            formula1,
-//            formula2,
-//            result = {
-//                success: true,
-//                messages: {
-//                    info: [],
-//                    warn: [],
-//                    error: []
-//                }
-//            };
-//
-//        if (valueFlow1_map[formulaId1].hasOwnProperty("formula") !== valueFlow2_map[formulaId2].hasOwnProperty("formula")) {
-//            result.success = false;
-//            result.messages.warn.push("Not matching formulas"); // todo: more meaningful message
-//        } else {
-//            formula1 = valueFlow1_map[formulaId1];
-//            formula2 = valueFlow2_map[formulaId2];
-//            if (formula1.formula.type.indexOf("SIMPLE") > -1 && formula1.formula.type === formula2.formula.type) {
-//                if (formula1.formula.operation !== formula2.formula.operation) {
-//                    result.success = false;
-//                    result.messages.warn.push("Mismatching operations"); // todo: more meaningful msg
-//                } else {
-//                    result = compareSimpleFormulaOperands(formula1.formula.operand, formula2.formula.operand);
-//                }
-//            }
-//        }
-//        return result;
-//    };
-//
-//    var compareSimpleFormulaOperands = function (operand1, operand2) {
-//        var operandArray1 = operand1 === "" ? [] : operand1.split(" "),
-//            operandArray2 = operand2 === "" ? [] : operand2.split(" "),
-//            result = {
-//                success: true,
-//                messages: {
-//                    info: [],
-//                    warn: [],
-//                    error: []
-//                }
-//            };
-//
-//        if (operandArray1.length !== operandArray2.length) {
-//            result.success = false;
-//            result.messages.warn.push("Formulas have different numbers of operands"); // todo: maybe an error msg; more meaningful
-//        } else {
-//            // todo: each of these have to go back to follow value flow
-//            result.success = compareAllPairsOfDerivedValuePairs(operandArray1.length, operandArray1, operandArray2);
-//            if (!result.success) {
-//                result.messages.warn.push("Operands of formula do not match"); // todo: more meaningful messages here
-//            }
-//        }
-//        return result;
-//    };
-//</editor-fold>
-
-
     /**
      * A helper function to log the trace of branching during checks
      * @param node
@@ -1359,111 +1124,7 @@ var compareAdms = function (adm1, adm2) {
 
         return result + ': ';
     };
+//</editor-fold>
 
-
-//    var compareFormulaArrays = function (formulaArray1, formulaArray2, parent) {
-//        var NAME = "@Name",
-//            TYPE = "@xsi:type",
-//            TYPES = ["SimpleFormula",
-//                     "CustomFormula"],
-//            result = {
-//                success: true,
-//                messages: []
-//            },
-//            i,
-//            formula1,
-//            formula2,
-//            simpleFormulaArray1 = [],
-//            simpleFormulaArray2 = [],
-//            customFormulaArray1 = [],
-//            customFormulaArray2 = [];
-//
-//        if (formulaArray1.length !== formulaArray2.length) {
-//            result.success = false;
-//            result.messages.push(formatParentTree(parent) + "Number of Formulas does not match: " + formulaArray1.length + ", " + formulaArray2.length);
-//        } else {
-//            // todo: comparing formulas cannot use the sorter; for now just compare # of formulas
-//            for (i = 0; i < formulaArray1.length; i += 1) {
-//                formula1 = formulaArray1[i];
-//                formula2 = formulaArray2[i];
-//                if (formula1[TYPE] === TYPES[1]) {
-//                    simpleFormulaArray1.push(formula1);
-//                } else if (formula1[TYPE] === TYPES[2]) {
-//                    customFormulaArray1.push(formula1);
-//                }
-//
-//                if (formula2[TYPE] === TYPES[1]) {
-//                    simpleFormulaArray2.push(formula2);
-//                } else if (formula2[TYPE] === TYPES[2]) {
-//                    customFormulaArray2.push(formula2);
-//                }
-//
-//                // todo: if of neither formula type, warning?
-//            }
-//
-//            if (simpleFormulaArray1.length !== simpleFormulaArray2.length) {
-//                result.success = false;
-//                result.messages.push(formatParentTree(parent) + "Number of SimpleFormulas does not match: " + simpleFormulaArray1.length + ", " + simpleFormulaArray2.length);
-//            } else if (customFormulaArray1.length !== customFormulaArray2.length) {
-//                result.success = false;
-//                result.messages.push(formatParentTree(parent) + "Number of CustomFormulas does not match: " + customFormulaArray1.length + ", " + customFormulaArray2.length);
-//            }
-//        }
-//        return result;
-//    };
-
-
-
-//    /**
-//     * When two component arrays have equal length, compare each pair of components
-//     * success - if component array length number of pairs match
-//     * fail - otherwise
-//     * @param name
-//     * @param type
-//     * @param parent
-//     * @param componentArray1
-//     * @param componentArray2
-//     * @param nextFunc
-//     */
-//    var compareAllPairsInArrays = function (name, type, parent, componentArray1, componentArray2, nextFunc) {
-//        var TARGET = componentArray1.length,
-//            counter = 0,
-//            i,
-//            j,
-//            node,
-//            result = {
-//                success: true,
-//                messages: {
-//                    info: [],
-//                    warn: [],
-//                    error: []
-//                }
-//            };
-//
-//        for (i = 0; i < componentArray1.length; i += 1) {
-//            for (j = 0; j < componentArray1.length; j += 1) {
-//                node = {
-//                    name: name,
-//                    type: type,
-//                    parent: parent,
-//                    children: []
-//                };
-//                result = nextFunc(componentArray1[i], componentArray2[j], node);
-//                if (result.success) {
-//                    ++counter;
-//                    componentArray1.splice(i, 1);
-//                    componentArray2.splice(j, 1);
-//                    --i;
-//                    --j;
-//                    break;
-//                }
-//            }
-//        }
-//
-//        if (counter !== TARGET) {
-//            result.success = false;
-//
-//        }
-//    };
 
 console.log (compareAdms(adm1, adm2));
