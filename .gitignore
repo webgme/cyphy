@@ -14,7 +14,7 @@ workerList.nedb
 labelJobs.json
 
 # cyphy project temp files and directories
-mongodatabase
+mongodatabase/*
 !mongodatabase/Readme.md
 
 src/compareAdms/samples/d1.adm
