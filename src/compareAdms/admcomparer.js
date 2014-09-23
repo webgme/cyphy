@@ -1,8 +1,8 @@
 var adm2Object = require('./dependencies/adm2object.js');
-//var adm1 = adm2Object('./src/compareAdms/samples/m3.adm');
-//var adm2 = adm2Object('./src/compareAdms/samples/m2.adm');
-var adm1 = adm2Object('./src/compareAdms/samples/MyMassSpringDamper.adm');
-var adm2 = adm2Object('./src/compareAdms/samples/Wheel.adm');
+var adm1 = adm2Object('./src/compareAdms/samples/dhs.adm');
+var adm2 = adm2Object('./src/compareAdms/samples/dhsID.adm');
+//var adm1 = adm2Object('./src/compareAdms/samples/MyMassSpringDamper.adm');
+//var adm2 = adm2Object('./src/compareAdms/samples/Wheel.adm');
 
 var formula1 = [];
 var formula2 = [];
@@ -12,8 +12,8 @@ var connectorComposition1_map = {};
 var connectorComposition2_map = {};
 var valueFlow1_map = {};
 var valueFlow2_map = {};
-var derivedValue1_map = {};
-var derivedValue2_map = {};
+var valuesToCompare1_map = {};
+var valuesToCompare2_map = {};
 var DESIGN1 = 1;
 var DESIGN2 = 2;
 var propertyMap1 = {};
@@ -94,7 +94,7 @@ var compareAdms = function (adm1, adm2) {
 
         if (len1 !== len2) {
             result.success = false;
-            result.messages.warn.push(formatParentTree(parent) + "Number of containers does not match: " + len1 + ", " + len2);
+            result.messages.error.push(formatParentTree(parent) + "Number of containers does not match: " + len1 + ", " + len2);
         } else {
             // sort the arrays first
             containerArray1.sort(function(a, b){
@@ -165,10 +165,10 @@ var compareAdms = function (adm1, adm2) {
 
         if (name1 !== name2) {
             result.success = false;
-            result.messages.warn.push(formatParentTree(parent) + "Name of Containers does not match: " + name1 + ", " + name2);
+            result.messages.error.push(formatParentTree(parent) + "Name of Containers does not match: " + name1 + ", " + name2);
         } else if (type1 !== type2) {
             result.success = false;
-            result.messages.warn.push(formatParentTree(parent) + "Type of Containers " + name1 + " does not match: " + type1 + ", " + type2);
+            result.messages.error.push(formatParentTree(parent) + "Type of Containers " + name1 + " does not match: " + type1 + ", " + type2);
         } else {
             // compare the container's child components
             for (i = 0; i < ELEMENTS.length; i += 1) {
@@ -182,7 +182,7 @@ var compareAdms = function (adm1, adm2) {
                     }
                 } else {
                     result.success = false;
-                    result.messages.warn.push(formatParentTree(node) + "Not both containers have child element " + ELEMENTS[i]);
+                    result.messages.error.push(formatParentTree(node) + "Not both containers have child element " + ELEMENTS[i]);
                     break;
                 }
             }
@@ -209,7 +209,7 @@ var compareAdms = function (adm1, adm2) {
 
         if (len1 !== len2) {
             result.success = false;
-            result.messages.warn.push(formatParentTree(parent) + "Number of ComponentInstances does not match: " + len1 + ", " + len2);
+            result.messages.error.push(formatParentTree(parent) + "Number of ComponentInstances does not match: " + len1 + ", " + len2);
         } else {
 
             // sort the arrays first
@@ -265,10 +265,10 @@ var compareAdms = function (adm1, adm2) {
 
         if (name1 !== name2) {
             result.success = false;
-            result.messages.warn.push(formatParentTree(parent) + "Name of ComponentInstance does not match: " + name1 + ", " + name2);
+            result.messages.error.push(formatParentTree(parent) + "Name of ComponentInstance does not match: " + name1 + ", " + name2);
         } else if (id1 !== id2) {
             result.success = false;
-            result.messages.warn.push(formatParentTree(parent) + "ComponentID of ComponentInstance does not match: " + id1 + ", " + id2);
+            result.messages.error.push(formatParentTree(parent) + "ComponentID of ComponentInstance does not match: " + id1 + ", " + id2);
         } else {
 
             // compare the instance's child components
@@ -283,7 +283,7 @@ var compareAdms = function (adm1, adm2) {
                     }
                 } else {
                     result.success = false;
-                    result.messages.warn.push(formatParentTree(parent) + "Not both ComponentInstances have child element " + ELEMENTS[i]);
+                    result.messages.error.push(formatParentTree(parent) + "Not both ComponentInstances have child element " + ELEMENTS[i]);
                     break;
                 }
             }
@@ -313,7 +313,7 @@ var compareAdms = function (adm1, adm2) {
 
         if (connectorArray1.length !== connectorArray2.length) {
             result.success = false;
-            result.messages.warn.push(formatParentTree(parent) + "Number of Connectors does not match: " + connectorArray1.length + ", " + connectorArray2.length);
+            result.messages.error.push(formatParentTree(parent) + "Number of Connectors does not match: " + connectorArray1.length + ", " + connectorArray2.length);
         } else {
             // sort the arrays first
             connectorArray1.sort(function(a, b){
@@ -357,7 +357,7 @@ var compareAdms = function (adm1, adm2) {
 
         if (connector1[NAME] !== connector2[NAME]) {
             result.success = false;
-            result.messages.warn.push(formatParentTree(parent) + "Name of Connectors does not match: " + connector1[NAME] + ", " + connector2[NAME]);
+            result.messages.error.push(formatParentTree(parent) + "Name of Connectors does not match: " + connector1[NAME] + ", " + connector2[NAME]);
         } else {
             storeConnectorCompositionInfo(connector1, connector1[NAME], TYPE, parent, connectorComposition1_map);
             storeConnectorCompositionInfo(connector2, connector2[NAME], TYPE, parent, connectorComposition2_map);
@@ -388,7 +388,7 @@ var compareAdms = function (adm1, adm2) {
             node;
         if (roleArray1.length !== roleArray2.length) {
             result.success = false;
-            result.messages.warn.push(formatParentTree(parent) + "Number of Roles does not match: " + roleArray1.length + ", " + roleArray2.length);
+            result.messages.error.push(formatParentTree(parent) + "Number of Roles does not match: " + roleArray1.length + ", " + roleArray2.length);
         } else {
             // sort the arrays first
             roleArray1.sort(function(a, b){
@@ -453,16 +453,16 @@ var compareAdms = function (adm1, adm2) {
 
         if (role1[type1] !== role2[type2]) {
             result.success = false;
-            result.messages.warn.push(formatParentTree(parent) + "Type of Role does not match: " + role1[type1] + ", " + role2[type2]);
+            result.messages.error.push(formatParentTree(parent) + "Type of Role does not match: " + role1[type1] + ", " + role2[type2]);
         } else if (role1[type1] === MODELICA) {
             if (role1[CLASS] !== role2[CLASS]) {
                 result.success = false;
-                result.messages.warn.push(formatParentTree(parent) + "Modelica Class of Role does not match: " + role1[CLASS] + ", " + role2[CLASS]);
+                result.messages.error.push(formatParentTree(parent) + "Modelica Class of Role does not match: " + role1[CLASS] + ", " + role2[CLASS]);
             }
         } else if (role1[type1] === CAD) {
             if (role1[XSI_TYPE] !== role2[XSI_TYPE]) {
                 result.success = false;
-                result.messages.warn.push(formatParentTree(parent) + "CAD Class of Role does not match: " + role1[XSI_TYPE] + ", " + role2[XSI_TYPE]);
+                result.messages.error.push(formatParentTree(parent) + "CAD Class of Role does not match: " + role1[XSI_TYPE] + ", " + role2[XSI_TYPE]);
             }
         }
 
@@ -484,7 +484,7 @@ var compareAdms = function (adm1, adm2) {
 
         if (propArray1.length !== propArray2.length) {
             result.success = false;
-            result.messages.warn.push(formatParentTree(parent) + "Number of Properties does not match: " + propArray1.length + ", " + propArray2.length);
+            result.messages.error.push(formatParentTree(parent) + "Number of Properties does not match: " + propArray1.length + ", " + propArray2.length);
         } else {
             // sort the arrays first
             propArray1.sort(function(a, b){
@@ -526,7 +526,7 @@ var compareAdms = function (adm1, adm2) {
 
         if (property1[NAME] !== property2[NAME]) {
             result.success = false;
-            result.messages.warn.push(formatParentTree(parent) + "Name of Property does not match: " + property1[NAME] + ", " + property2[NAME]);
+            result.messages.error.push(formatParentTree(parent) + "Name of Property does not match: " + property1[NAME] + ", " + property2[NAME]);
         } else {
             storePropertyValuePair(property1[VALUE], property2[VALUE], parent);
         }
@@ -555,7 +555,7 @@ var compareAdms = function (adm1, adm2) {
 
         if (connectorInstanceArray1.length !== connectorInstanceArray2.length) {
             result.success = false;
-            result.messages.warn.push(formatParentTree(parent) + "Number of ConnectorInstances does not match: " + connectorInstanceArray1.length + ", " + connectorInstanceArray2.length);
+            result.messages.error.push(formatParentTree(parent) + "Number of ConnectorInstances does not match: " + connectorInstanceArray1.length + ", " + connectorInstanceArray2.length);
         } else {
             // sort the arrays first
             connectorInstanceArray1.sort(function(a, b){
@@ -605,7 +605,7 @@ var compareAdms = function (adm1, adm2) {
 
         if (connectorInstance1[ID] !== connectorInstance2[ID]) {
             result.success = false;
-            result.messages.warn.push(formatParentTree(node), "IDinComponentModel of ConnectorInstances does not match: " + connectorInstance1[ID] + ", " + connectorInstance2[ID]);
+            result.messages.error.push(formatParentTree(node), "ConnectorInstances do not have the same id: " + connectorInstance1[ID] + ", " + connectorInstance2[ID]);
         } else {
             storeConnectorCompositionInfo(connectorInstance1, node.parent.name, TYPE, node, connectorComposition1_map);
             storeConnectorCompositionInfo(connectorInstance2, node.parent.name, TYPE, node, connectorComposition2_map);
@@ -631,7 +631,7 @@ var compareAdms = function (adm1, adm2) {
 
         if (primitivePropertyInstanceArray1.length !== primitivePropertyInstanceArray2.length) {
             result.success = false;
-            result.messages.warn.push(formatParentTree(parent) + "Number of PrimitivePropertyInstances does not match: " + primitivePropertyInstanceArray1.length + ", " + primitivePropertyInstanceArray2.length);
+            result.messages.error.push(formatParentTree(parent) + "Number of PrimitivePropertyInstances does not match: " + primitivePropertyInstanceArray1.length + ", " + primitivePropertyInstanceArray2.length);
         } else {
 
             // sort the arrays by ID first
@@ -676,7 +676,7 @@ var compareAdms = function (adm1, adm2) {
 
         if (primtivePropertyInstance1[ID] !== primtivePropertyInstance2[ID]) {
             result.success = false;
-            result.messages.warn.push(formatParentTree(node) + "Does not have the same primitive property: " + primtivePropertyInstance1[ID] + ", " + primtivePropertyInstance2[ID]);
+            result.messages.error.push(formatParentTree(node) + "Does not have the same primitive property: " + primtivePropertyInstance1[ID] + ", " + primtivePropertyInstance2[ID]);
         } else {
 //            storeValueFlowInfo(primtivePropertyInstance1[VALUE], node.name, TYPE, node, DESIGN1);
 //            storeValueFlowInfo(primtivePropertyInstance2[VALUE], node.name, TYPE, node, DESIGN2);
@@ -771,7 +771,7 @@ var compareAdms = function (adm1, adm2) {
             // number of ids in ConnectorComposition needs to match
             if (connector1_compIds.length !== connector2_compIds.length) {
                 result.success = false;
-                result.messages.warn.push(formatParentTree(val1.parent) + "Does not have the same number of connections.");
+                result.messages.error.push(formatParentTree(val1.parent) + "Does not have the same number of connections.");
                 return result;
             } else {
                 for (j = 0; j < connector1_compIds.length; j += 1) {
@@ -807,7 +807,7 @@ var compareAdms = function (adm1, adm2) {
                     type = connectorComposition1_map[refId1].type;
                     msg = type + " " + parentName1 + " does not connect to the same connections; they connect to: " + compositionArray1.toString() +
                         " and " + compositionArray2.toString() + " respectively.";
-                    result.messages.warn.push(formatParentTree(val1.parent) + msg);
+                    result.messages.error.push(formatParentTree(val1.parent) + msg);
                     return result;
                 }
             }
@@ -857,11 +857,11 @@ var compareAdms = function (adm1, adm2) {
         var EXP = "ValueExpression";
 
         if (element1.hasOwnProperty(EXP) || element2.hasOwnProperty(EXP)) {
-            storePropertyValue(element1, parent, propertyMap1, derivedValue1_map, true);
-            storePropertyValue(element2, parent, propertyMap2, derivedValue2_map, true);
+            storePropertyValue(element1, parent, propertyMap1, valuesToCompare1_map, true);
+            storePropertyValue(element2, parent, propertyMap2, valuesToCompare2_map, true);
         } else {
-            storePropertyValue(element1, parent, propertyMap1, derivedValue1_map, false);
-            storePropertyValue(element2, parent, propertyMap2, derivedValue2_map, false);
+            storePropertyValue(element1, parent, propertyMap1, valuesToCompare1_map, false);
+            storePropertyValue(element2, parent, propertyMap2, valuesToCompare2_map, false);
         }
     };
 
@@ -872,14 +872,18 @@ var compareAdms = function (adm1, adm2) {
      * @param valueElement
      * @param parent - parent of value element
      * @param propertyMap
-     * @param derivedValueMap
      * @param addToKey
+     * @param valuesToCheckMap
      */
-    var storePropertyValue = function (valueElement, parent, propertyMap, derivedValueMap, addToKey) {
+    var storePropertyValue = function (valueElement, parent, propertyMap, valuesToCheckMap, addToKey) {
         var ID = "@ID",
             EXP = "ValueExpression",
             XSI_TYPE = "@xsi:type",
             DERIVED = "DerivedValue",
+            FIXED = "FixedValue",
+            PARAM = "ParametricValue",
+            VALUE = "Value",
+            FIXED_VAL = "#text",
             VALUE_SOURCE = "@ValueSource",
             xsi,
             valueSrc = "",
@@ -887,20 +891,29 @@ var compareAdms = function (adm1, adm2) {
             key = valueElement[ID],
             value = {};
 
-        value.parent = parent;
 
-        if (valueElement.hasOwnProperty(EXP)) {
-            exp = valueElement[EXP];
-            xsi = exp[XSI_TYPE];
-            if (xsi.indexOf(DERIVED) > -1) {
-                valueSrc = exp[VALUE_SOURCE];
-            } else {
-                value.expression = exp;
-            }
-        }
-        propertyMap[key] = value;
+        propertyMap[key] = parent;
+
+        // if valueElement has ValueExpression tag, store its expression as part of the value
+
+
         if (addToKey) {
-            derivedValueMap[key] = valueSrc === "" ? undefined : valueSrc;
+            if (valueElement.hasOwnProperty(EXP)) {
+                exp = valueElement[EXP];
+                xsi = exp[XSI_TYPE];
+                if (xsi.indexOf(DERIVED) > -1) {
+                    value.type = DERIVED;
+                    valueSrc = exp[VALUE_SOURCE];
+                    value.value = valueSrc === "" ? undefined : valueSrc;
+                } else if (xsi.indexOf(FIXED) > -1){
+                    value.type = FIXED;
+                    value.value = exp[VALUE][FIXED_VAL];
+                } else if (xsi.indexOf(PARAM) > -1) {
+                    value.type = PARAM;
+                    value.value = exp;
+                }
+            }
+            valuesToCheckMap[key] = value;
         }
     };
 
@@ -909,7 +922,18 @@ var compareAdms = function (adm1, adm2) {
      * @returns {{success: boolean, messages: {info: Array, warn: Array, error: Array}}}
      */
     var compareValueFlow = function () {
-        var result = {
+        var keyLength,
+            i,
+            key1,
+            key2,
+            val1,
+            val2,
+            parent1,
+            parent2,
+            DERIVED = "DerivedValue",
+            FIXED = "FixedValue",
+            PARAM = "ParametricValue",
+            result = {
                 success: true,
                 messages: {
                     info: [],
@@ -918,14 +942,170 @@ var compareAdms = function (adm1, adm2) {
                 }
             };
 
-        if (Object.keys(derivedValue1_map).length !== Object.keys(derivedValue2_map).length) {
-            result.messages.info.push("Some error occurred");  // todo: delete this debugging message
+        if (Object.keys(valuesToCompare1_map).length !== Object.keys(valuesToCompare2_map).length) {
+            console.log("Some exception occurred");  // todo: delete this debugging message
             return result;
         } else {
+            keyLength = Object.keys(valuesToCompare1_map).length;
+            for (i = 0; i < keyLength; i += 1) {
+                key1 = Object.keys(valuesToCompare1_map)[i];
+                key2 = Object.keys(valuesToCompare2_map)[i];
+                val1 = valuesToCompare1_map[key1];
+                val2 = valuesToCompare2_map[key2];
 
+                if (val1.type !== val2.type) {
+                    result.success = false;
+                    parent1 = propertyMap1[key1];
+                    result.messages.error.push(formatParentTree(parent1) + "Value type does not match.");
+                    return result;
+                } else {
+//                    if (val1.type === FIXED) {
+//                        if (val1.value !== val2.value) {
+//                            result.success = false;
+//                            parent1 = propertyMap1[key1];
+//                            result.messages.error.push(formatParentTree(parent1) + "Fixed value does not match.");
+//                            return result;
+//                        }
+//                    } else if (val1.type === DERIVED) {
+//                        result.success = compareDerivedValue(key1, key2, val1, val2);
+//                    } else if (val1.type === PARAM) {
+//                        compareParametricValue();
+//                    } else {
+//                        console.log("Some exception occurred");
+//                    }
+                    val1 = getEndValue(key1, valuesToCompare1_map, propertyMap1);
+                    val2 = getEndValue(key2, valuesToCompare2_map, propertyMap2);
+
+                    if (!val1 || !val2) {
+                        result.success = false;
+                        parent1 = propertyMap1[key1];
+                        result.messages.warn.push(formatParentTree(parent1) + "Some values are undefined.");
+                    } else if (val1.type !== val2.type) {
+                        result.success = false;
+                        parent1 = propertyMap1[key1];
+                        result.messages.warn.push(formatParentTree(parent1) + "End value type does not match.");
+                    } else if (val1.value !== val2.value) {
+                        result.success = false;
+                        parent1 = propertyMap1[key1];
+                        result.messages.error.push(formatParentTree(parent1) + "End value does not match."); // todo: add what values each point to
+                        return result;
+                    }
+
+                }
+            }
         }
 
         return result;
+    };
+
+    var compareDerivedValue = function (key1, key2, val1, val2) {
+//        var success = true;
+//        if (val1.value === undefined || val2.value === undefined) {
+//            result.success = false;
+//            parent1 = propertyMap1[key1];
+//            result.messages.warn.push(formatParentTree(parent1) + "Derived value does not have a source."); // todo: a more meaningful msg
+////                            return result;
+//        } else {
+//            parent1 = propertyMap1[val1.value];
+//            parent2 = propertyMap2[val2.value];
+//
+//            if (!parent1 || !parent2) {
+//                result.success = false;
+//                parent1 = propertyMap1[key1];
+//                result.messages.warn.push(formatParentTree(parent1) + "Derived value source is undefined."); // todo: a more meaningful msg
+//                // todo: formula also has undefined value
+////                                return result;
+//            } else if (parent1.name !== parent2.name) {
+//                result.success = false;
+//                parent1 = propertyMap1[key1];
+//                result.messages.error.push(formatParentTree(parent1) + "Values come from different sources: " + parent1.name + ", " + parent2.name + " respectively.");
+//                return result;
+//            }
+//        }
+//        return success;
+
+    };
+
+    /**
+     *
+     * @param key
+     * @param valuesToCheckMap
+     * @param propertyMap
+     */
+    var getEndValue = function (key, valuesToCheckMap, propertyMap) {
+        // todo: a more efficient way would be comparing the derived values to see if they are equal at every level; if equal return early
+        var endVal = {},
+            valueType = valuesToCheckMap[key].type,
+            srcID,
+            expression,
+            DERIVED = "DerivedValue",
+            FIXED = "FixedValue",
+            PARAM = "ParametricValue",
+            ASSIGNED = "AssignedValue",
+            VALUE = "Value";
+
+        if (valueType === FIXED) {
+            endVal = {
+                type: FIXED,
+                value: valuesToCheckMap[key].value
+            };
+
+        } else if (valueType === DERIVED) {
+            // if src ID is in the valuesToCheck map, keep checking
+            srcID = valuesToCheckMap[key].value;
+            if (valuesToCheckMap.hasOwnProperty(srcID)) {
+                    getEndValue(srcID, valuesToCheckMap, propertyMap);
+            } else {
+                // otherwise, it's a primitive property instance; look up its identifier and return it
+                if (!propertyMap.hasOwnProperty(srcID)) {
+                    endVal = undefined;
+                } else {
+                    endVal = {
+                        type: DERIVED,
+                        value: propertyMap[srcID].name
+                    };
+                }
+            }
+        } else if (valueType === PARAM) {
+            expression = valuesToCheckMap[key].value[ASSIGNED];
+            endVal = getEndAssignedValue(expression);
+            if (endVal.type === DERIVED) {
+                endVal = getEndValue(endVal.value, valuesToCheckMap, propertyMap);
+            }
+        }
+
+        return endVal;
+    };
+
+    var getEndAssignedValue = function (expression) {
+        var TYPE = "@xsi:type",
+            DERIVED = "DerivedValue",
+            FIXED = "FixedValue",
+            PARAM = "ParametricValue",
+            ASSIGNED = "AssignedValue",
+            VALUE = "Value",
+            TEXT = "#text",
+            EXP = "ValueExpression",
+            SRC = "@ValueSource",
+            type,
+            value = {};
+
+        type = expression[TYPE];
+        if (type.indexOf(FIXED) > -1) {
+            value = {
+                type: FIXED,
+                value: expression[VALUE][TEXT]
+            };
+        } else if (type.indexOf(PARAM) > -1) {
+            value = getEndAssignedValue(expression[EXP][ASSIGNED]); // todo: what's the format of an assigned parametric value???
+        } else if (type.indexOf(DERIVED) > -1) {
+            value = {
+                type: DERIVED,
+                value: expression[SRC]
+            };
+        }
+
+        return value;
     };
 
 
@@ -943,7 +1123,7 @@ var compareAdms = function (adm1, adm2) {
 //            key, // id of value stored as key of LUT
 //            value = {},
 //            valueFlowMap = design === DESIGN1 ? valueFlow1_map : valueFlow2_map,
-//            derivedValueMap = design === DESIGN1 ? derivedValue1_map : derivedValue2_map;
+//            derivedValueMap = design === DESIGN1 ? valuesToCompare1_map : valuesToCompare2_map;
 //
 //        key = valueFlowElement[ID];
 //
@@ -988,36 +1168,57 @@ var compareAdms = function (adm1, adm2) {
 //    };
 
     var processFormulaArrays = function (formulaArray1, formulaArray2, parent) {
+        var result = {
+                success: true,
+                messages: {
+                    info: [],
+                    warn: [],
+                    error: []
+                }
+            };
         storeFormulaInfo(formulaArray1, parent.name);
         storeFormulaInfo(formulaArray2, parent.name);
+
+        return result;
     };
 
+    // todo: formulas stored as undefined for now
     var storeFormulaInfo = function (formulaArray, parentIdentifier) {
-        var TYPE = "@xsi:type",
-            ID = "@ID",
-            OPERATION = "@Operation",
-            OPERAND = "@Operand",
+        var ID = "@ID",
             i,
             key,
             value = {};
         for (i = 0; i < formulaArray; i += 1) {
             key = formulaArray[i][ID];
-            value.parentIdentifier = parentIdentifier;
-            value.formula = {};
-            value.formula.type = formulaArray[i][TYPE];
-            value.formula.operation = formulaArray[i][OPERATION];
-            value.formula.operand = formulaArray[i][OPERAND];
-            valueFlow1_map[key] = value;
+            value = undefined;
         }
     };
+
+//    var storeFormulaInfo = function (formulaArray, parentIdentifier) {
+//        var TYPE = "@xsi:type",
+//            ID = "@ID",
+//            OPERATION = "@Operation",
+//            OPERAND = "@Operand",
+//            i,
+//            key,
+//            value = {};
+//        for (i = 0; i < formulaArray; i += 1) {
+//            key = formulaArray[i][ID];
+//            value.parentIdentifier = parentIdentifier;
+//            value.formula = {};
+//            value.formula.type = formulaArray[i][TYPE];
+//            value.formula.operation = formulaArray[i][OPERATION];
+//            value.formula.operand = formulaArray[i][OPERAND];
+//            valueFlow1_map[key] = value;
+//        }
+//    };
 //
 //    var compareValueFlow = function () {
 //
 //    };
-
 //    var compareValueFlow = function () {
-//        var keyLen1 = Object.keys(derivedValue1_map).length,
-//            keyLen2 = Object.keys(derivedValue2_map).length,
+//        var keyLen1 = Object.keys(valuesToCompare1_map).length,
+//            keyLen2 = Object.keys(valuesToCompare2_map).length,
 //            result = {
 //                success: true,
 //                messages: {
@@ -1031,7 +1232,7 @@ var compareAdms = function (adm1, adm2) {
 //            result.success = false;
 //            result.messages.warn.push("Designs do not have the same number of derived properties"); //todo: what's a meaningful message?
 //        } else {
-//            result.success = compareAllPairsOfDerivedValuePairs(keyLen1, Object.keys(derivedValue1_map).slice(0), Object.keys(derivedValue2_map).slice(0));
+//            result.success = compareAllPairsOfDerivedValuePairs(keyLen1, Object.keys(valuesToCompare1_map).slice(0), Object.keys(valuesToCompare2_map).slice(0));
 //            result.messages.warn.push("The derived values have different sources"); // todo: add a message here
 //        }
 //        return result;
@@ -1051,8 +1252,8 @@ var compareAdms = function (adm1, adm2) {
 //            for (j = 0; j < keys1.length; j += 1) {
 //                keyId1 = keys1[i]; // value ID of derived property
 //                keyId2 = keys2[j]; // value ID of derived property
-//                srcId1 = derivedValue1_map[keyId1]; // valueSource of derived property
-//                srcId2 = derivedValue2_map[keyId1]; // valueSource of derived property
+//                srcId1 = valuesToCompare1_map[keyId1]; // valueSource of derived property
+//                srcId2 = valuesToCompare2_map[keyId1]; // valueSource of derived property
 //
 //                // if value id points to the same parentIdentifier && valueSource points to the source with the same parent identifier
 //                if (valueFlow1_map[keyId1].parentIdentifier === valueFlow2_map[keyId2].parentIdentifier
