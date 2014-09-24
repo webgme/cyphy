@@ -1,6 +1,6 @@
 var adm2Object = require('./dependencies/adm2object.js');
-var adm1 = adm2Object('./src/compareAdms/samples/dhs.adm');
-var adm2 = adm2Object('./src/compareAdms/samples/dhsID.adm');
+var adm1 = adm2Object('./src/compareAdms/samples/d1.adm');
+var adm2 = adm2Object('./src/compareAdms/samples/d2.adm');
 //var adm1 = adm2Object('./src/compareAdms/samples/MyMassSpringDamper.adm');
 //var adm2 = adm2Object('./src/compareAdms/samples/Wheel.adm');
 
@@ -894,7 +894,7 @@ var storePropertyValuePair = function (element1, element2, parent) {
                 if (xsi.indexOf(DERIVED) > -1) {
                     value.type = DERIVED;
                     valueSrc = exp[VALUE_SOURCE];
-                    value.value = valueSrc === "" ? undefined : valueSrc;
+                    value.value = valueSrc === "" ? null : valueSrc;
                 } else if (xsi.indexOf(FIXED) > -1){
                     value.type = FIXED;
                     value.value = exp[VALUE][FIXED_VAL];
@@ -931,7 +931,7 @@ var storePropertyValuePair = function (element1, element2, parent) {
             value = {};
         for (i = 0; i < formulaArray; i += 1) {
             key = formulaArray[i][ID];
-            value = undefined;
+            value = null;
         }
     };
 
@@ -1034,7 +1034,7 @@ var storePropertyValuePair = function (element1, element2, parent) {
             } else {
                 // otherwise, it's a primitive property instance; look up its identifier and return it
                 if (!propertyMap.hasOwnProperty(srcID)) {
-                    endVal = undefined;
+                    endVal = null;
                 } else {
                     endVal = {
                         type: DERIVED,
