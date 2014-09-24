@@ -1,6 +1,6 @@
 var adm2Object = require('./dependencies/adm2object.js');
-var adm1 = adm2Object('./src/compareAdms/samples/d1.adm');
-var adm2 = adm2Object('./src/compareAdms/samples/d2.adm');
+var adm1 = adm2Object('./src/compareAdms/samples/d2.adm');
+var adm2 = adm2Object('./src/compareAdms/samples/d1.adm');
 //var adm1 = adm2Object('./src/compareAdms/samples/MyMassSpringDamper.adm');
 //var adm2 = adm2Object('./src/compareAdms/samples/Wheel.adm');
 
@@ -20,7 +20,8 @@ var compareAdms = function (adm1, adm2) {
             warn: [],
             error: []
         }
-        };
+        },
+        subResult;
 
     if (JSON.stringify(adm1, null) === JSON.stringify(adm2, null)) {
         result.success = true;
@@ -34,9 +35,14 @@ var compareAdms = function (adm1, adm2) {
             result = compareConnectorComposition();
 
             // 3. third pass -- check against all value flows (formulas, properties)
-            if (result.success) {
-                result = compareValueFlow();
+            subResult = compareValueFlow();
+
+            if (!result.success || !subResult.success) {
+                result.success = false;
             }
+            result.messages.info = result.messages.info.concat(subResult.messages.info);
+            result.messages.warn = result.messages.warn.concat(subResult.messages.warn);
+            result.messages.error = result.messages.error.concat(subResult.messages.error);
         }
     }
 
@@ -947,11 +953,7 @@ var storePropertyValuePair = function (element1, element2, parent) {
             key2,
             val1,
             val2,
-            parent1,
-            parent2,
-            DERIVED = "DerivedValue",
-            FIXED = "FixedValue",
-            PARAM = "ParametricValue",
+            parent,
             result = {
                 success: true,
                 messages: {
@@ -974,28 +976,25 @@ var storePropertyValuePair = function (element1, element2, parent) {
 
                 if (val1.type !== val2.type) {
                     result.success = false;
-                    parent1 = propertyMap1[key1];
-                    result.messages.error.push(formatParentTree(parent1) + "Value type does not match.");
-                    return result;
+                    parent = propertyMap1[key1];
+                    result.messages.error.push(formatParentTree(parent) + "Value type does not match.");
                 } else {
                     val1 = getEndValue(key1, valuesToCompare1_map, propertyMap1);
                     val2 = getEndValue(key2, valuesToCompare2_map, propertyMap2);
 
                     if (!val1 || !val2) {
                         result.success = false;
-                        parent1 = propertyMap1[key1];
-                        result.messages.warn.push(formatParentTree(parent1) + "Some values are undefined.");
+                        parent = propertyMap1[key1];
+                        result.messages.warn.push(formatParentTree(parent) + "Some values are undefined.");
                     } else if (val1.type !== val2.type) {
                         result.success = false;
-                        parent1 = propertyMap1[key1];
-                        result.messages.warn.push(formatParentTree(parent1) + "End value type does not match.");
+                        parent = propertyMap1[key1];
+                        result.messages.warn.push(formatParentTree(parent) + "End value type does not match.");
                     } else if (val1.value !== val2.value) {
                         result.success = false;
-                        parent1 = propertyMap1[key1];
-                        result.messages.error.push(formatParentTree(parent1) + "End value does not match."); // todo: add what values each point to
-                        return result;
+                        parent = propertyMap1[key1];
+                        result.messages.error.push(formatParentTree(parent) + "End value does not match."); // todo: add what values each point to
                     }
-
                 }
             }
         }
@@ -1012,13 +1011,19 @@ var storePropertyValuePair = function (element1, element2, parent) {
     var getEndValue = function (key, valuesToCheckMap, propertyMap) {
         // todo: a more efficient way would be comparing the derived values to see if they are equal at every level; if equal return early
         var endVal = {},
-            valueType = valuesToCheckMap[key].type,
+            valueType,
             srcID,
             expression,
             DERIVED = "DerivedValue",
             FIXED = "FixedValue",
             PARAM = "ParametricValue",
             ASSIGNED = "AssignedValue";
+
+        if (valuesToCheckMap.hasOwnProperty(key)) {
+            valueType = valuesToCheckMap[key].type;
+        } else {
+            endVal = propertyMap.hasOwnProperty(key) ? propertyMap[key].name : null;
+        }
 
         if (valueType === FIXED) {
             endVal = {
@@ -1030,7 +1035,7 @@ var storePropertyValuePair = function (element1, element2, parent) {
             // if src ID is in the valuesToCheck map, keep checking
             srcID = valuesToCheckMap[key].value;
             if (valuesToCheckMap.hasOwnProperty(srcID)) {
-                    getEndValue(srcID, valuesToCheckMap, propertyMap);
+                endVal = getEndValue(srcID, valuesToCheckMap, propertyMap);
             } else {
                 // otherwise, it's a primitive property instance; look up its identifier and return it
                 if (!propertyMap.hasOwnProperty(srcID)) {
