@@ -1,4 +1,5 @@
 var fs = require("fs");
+
 var converters = require('./xmljsonconverter.js');
 var arrayElementsInXml = {
     Design: false,
@@ -18,7 +19,10 @@ var xml2json = new converters.Xml2json({ skipWSText: true, arrayElements: arrayE
 
 var adm2Object = function (admFile) {
     var buffer = fs.readFileSync(admFile);
-    return xml2json.convertFromBuffer(buffer);
+    var output = xml2json.convertFromBuffer(buffer);
+    var filename = admFile.replace('adm', 'json');
+    fs.writeFileSync(filename, output);
+    return output;
 };
 
 module.exports = adm2Object;
