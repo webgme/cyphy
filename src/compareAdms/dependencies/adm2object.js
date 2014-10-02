@@ -21,7 +21,7 @@ var adm2Object = function (admFile) {
     var buffer = fs.readFileSync(admFile);
     var output = xml2json.convertFromBuffer(buffer);
     var filename = admFile.replace('adm', 'json');
-    fs.writeFileSync(filename, output);
+    fs.writeFileSync(filename, JSON.stringify(output) , 'utf-8');
     return output;
 };
 
