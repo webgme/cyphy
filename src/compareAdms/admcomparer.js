@@ -1,16 +1,4 @@
-var adm2Object = require('./dependencies/adm2object.js');
-var adm1 = adm2Object('./src/compareAdms/samples/d2.adm');
-var adm2 = adm2Object('./src/compareAdms/samples/d1.adm');
-//var adm1 = adm2Object('./src/compareAdms/samples/MyMassSpringDamper.adm');
-//var adm2 = adm2Object('./src/compareAdms/samples/Wheel.adm');
 
-var properties = [];
-var connectorComposition1_map = {};
-var connectorComposition2_map = {};
-var valuesToCompare1_map = {};
-var valuesToCompare2_map = {};
-var propertyMap1 = {};
-var propertyMap2 = {};
 
 var compareAdms = function (adm1, adm2) {
     var result = {
@@ -1115,6 +1103,52 @@ var storePropertyValuePair = function (element1, element2, parent) {
         return result + ': ';
     };
 //</editor-fold>
+
+
+//var adm1 = adm2Object('./src/compareAdms/samples/MyMassSpringDamper.adm');
+//var adm2 = adm2Object('./src/compareAdms/samples/Wheel.adm');
+/*globals console */
+
+var properties = [];
+var connectorComposition1_map = {};
+var connectorComposition2_map = {};
+var valuesToCompare1_map = {};
+var valuesToCompare2_map = {};
+var propertyMap1 = {};
+var propertyMap2 = {};
+
+
+var adm1,
+    adm2,
+    jsonSrc1 = './src/compareAdms/samples/d2.json',
+    jsonSrc2 = './src/compareAdms/samples/d1.json';
+if (typeof window === 'undefined') {
+    var adm2Object = require('./dependencies/adm2object.js');
+    adm1 = adm2Object('./src/compareAdms/samples/d2.adm');
+    adm2 = adm2Object('./src/compareAdms/samples/d1.adm');
+} else {
+    // use jquery ajax to load the json files in SYNC mode, may take some time
+    $.ajax(jsonSrc1, {'async': false})
+        .done(function ( data ) {
+            // downloaded successfully
+            adm1 = data;
+        })
+        .fail(function () {
+            // download failed for this type
+            console.warning("Failed to download file: " + jsonSrc1);
+        });
+
+    // download 2nd file...
+    $.ajax(jsonSrc1, {'async': false})
+        .done(function ( data ) {
+            // downloaded successfully
+            adm1 = data;
+        })
+        .fail(function () {
+            // download failed for this type
+            console.warning("Failed to download file: " + jsonSrc2);
+        });
+}
 
 
 console.log (compareAdms(adm1, adm2));
