@@ -1,5 +1,4 @@
-
-
+/*globals console */
 var compareAdms = function (adm1, adm2) {
     var result = {
             success: true,
@@ -1105,9 +1104,9 @@ var storePropertyValuePair = function (element1, element2, parent) {
 //</editor-fold>
 
 
+//<editor-fold desc="Main code to run">
 //var adm1 = adm2Object('./src/compareAdms/samples/MyMassSpringDamper.adm');
 //var adm2 = adm2Object('./src/compareAdms/samples/Wheel.adm');
-/*globals console */
 
 var properties = [];
 var connectorComposition1_map = {};
@@ -1120,35 +1119,24 @@ var propertyMap2 = {};
 
 var adm1,
     adm2,
-    jsonSrc1 = './src/compareAdms/samples/d2.json',
-    jsonSrc2 = './src/compareAdms/samples/d1.json';
+    jsonSrc1 = './samples/d2.json',
+    jsonSrc2 = './samples/d1.json';
+
+// checking if we are running it in the server side -- if window is undefined then we are
 if (typeof window === 'undefined') {
     var adm2Object = require('./dependencies/adm2object.js');
     adm1 = adm2Object('./src/compareAdms/samples/d2.adm');
     adm2 = adm2Object('./src/compareAdms/samples/d1.adm');
 } else {
     // use jquery ajax to load the json files in SYNC mode, may take some time
-    $.ajax(jsonSrc1, {'async': false})
-        .done(function ( data ) {
-            // downloaded successfully
-            adm1 = data;
-        })
-        .fail(function () {
-            // download failed for this type
-            console.warning("Failed to download file: " + jsonSrc1);
-        });
-
-    // download 2nd file...
-    $.ajax(jsonSrc1, {'async': false})
-        .done(function ( data ) {
-            // downloaded successfully
-            adm1 = data;
-        })
-        .fail(function () {
-            // download failed for this type
-            console.warning("Failed to download file: " + jsonSrc2);
-        });
+    $.ajaxSetup( { "async": false } );
+    $.getJSON(jsonSrc1, function(data){
+        adm1 = data;
+    });
+    $.getJSON(jsonSrc2, function(data){
+        adm2 = data
+    });
 }
 
-
 console.log (compareAdms(adm1, adm2));
+//</editor-fold>
