@@ -1138,5 +1138,10 @@ if (typeof window === 'undefined') {
     });
 }
 
-console.log (compareAdms(adm1, adm2));
+if (window.console && window.console.profile) {
+    console.profile("comareAdms profiler");
+    console.log (compareAdms(adm1, adm2));
+    console.profileEnd();
+}
+
 //</editor-fold>
