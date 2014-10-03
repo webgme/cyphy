@@ -1127,6 +1127,7 @@ if (typeof window === 'undefined') {
     var adm2Object = require('./dependencies/adm2object.js');
     adm1 = adm2Object('./src/compareAdms/samples/d2.adm');
     adm2 = adm2Object('./src/compareAdms/samples/d1.adm');
+    console.log (compareAdms(adm1, adm2));
 } else {
     // use jquery ajax to load the json files in SYNC mode, may take some time
     $.ajaxSetup( { "async": false } );
@@ -1136,12 +1137,13 @@ if (typeof window === 'undefined') {
     $.getJSON(jsonSrc2, function(data){
         adm2 = data
     });
-}
 
-if (window.console && window.console.profile) {
-    console.profile("comareAdms profiler");
-    console.log (compareAdms(adm1, adm2));
-    console.profileEnd();
+    // profile cpu usage with chrome developer tool
+    if (window.console && window.console.profile) {
+        console.profile("comareAdms profiler");
+        console.log (compareAdms(adm1, adm2));
+        console.profileEnd();
+    }
 }
 
 //</editor-fold>
