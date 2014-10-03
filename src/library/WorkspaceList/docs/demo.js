@@ -1,6 +1,4 @@
-/*globals console, angular, Chance*/
-
-'use strict';
+/*globals console, angular, Chance, setTimeout*/
 
 var demoApp = angular.module('cyphy.ui.WorkspaceList.demo', [
     'cyphy.components',
@@ -8,87 +6,139 @@ var demoApp = angular.module('cyphy.ui.WorkspaceList.demo', [
 ]);
 
 // overwrite WorkspaceService with dummy data
-demoApp.service('WorkspaceService', function () {
-    var self = this,
-        workspaces = [],
-        itemGenerator;
+demoApp.service('WorkspaceService', function ($q, $timeout) {
+    'use strict';
 
-    itemGenerator = function (id) {
-        return {
-            id: id,
-            title: self.chance.name(),
-            toolTip: 'Open item',
-            description: self.chance.sentence(),
-            lastUpdated: {
-                time: self.chance.date({year: (new Date()).getFullYear()}),
-                user: self.chance.name()
-            },
-            stats: [
-                {
-                    value: self.chance.integer({min: 0, max: 5000}),
-                    toolTip: 'Components',
-                    iconClass: 'fa fa-puzzle-piece'
-                },
-                {
-                    value: self.chance.integer({min: 0, max: 50}),
-                    toolTip: 'Design Spaces',
-                    iconClass: 'fa fa-cubes'
-                },
-                {
-                    value: self.chance.integer({min: 0, max: 500}),
-                    toolTip: 'Test benches',
-                    iconClass: 'glyphicon glyphicon-saved'
-                },
-                {
-                    value: self.chance.integer({min: 0, max: 20}),
-                    toolTip: 'Requirements',
-                    iconClass: 'fa fa-bar-chart-o'
-                }
-            ]
-            //details    : 'Some detailed text. Lorem ipsum ama fea rin the poc ketofmyja cket.'
-        };
+    var self = this,
+        workspaceUpdateListener;
+
+    this.duplicateWorkspace = function (context, otherWorkspaceId) {
+        console.log('Not implemented.', otherWorkspaceId);
     };
 
-    this.getWorkspaces = function () {
-        var numItems,
-            i;
+    this.createWorkspace = function (context, data) {
+        console.log('Not implemented.', data);
+    };
 
-        console.log('Getting workspaces ...');
+    this.deleteWorkspace = function (context, workspaceId, msg) {
+        $timeout(function () {
+            workspaceUpdateListener({
+                id: workspaceId,
+                type: 'unload',
+                data: null
+            });
+        }, 400);
+    };
+
+    this.exportWorkspace = function (workspaceId) {
+        console.log('Not implemented.', workspaceId);
+    };
+
+    this.watchWorkspaces = function (parentContext, updateListener) {
+        var deferred = $q.defer(),
+            i,
+            numItems,
+            data = {
+                regionId: 'region_mockId',
+                workspaces: {} // workspace = {id: <string>, name: <string>, description: <string>}
+            };
+
+        workspaceUpdateListener = updateListener;
 
         self.chance = new Chance();
-        numItems = self.chance.integer({min: 2, max: 15});
+        numItems = self.chance.integer({min: 2, max: 8});
 
         for (i = 0; i < numItems; i += 1) {
-            workspaces.push(itemGenerator(i));
+            data.workspaces[i] = {
+                id: i,
+                name: self.chance.name(),
+                description: self.chance.sentence()
+            };
         }
 
-        console.log('Got workspaces ', workspaces.length);
+        $timeout(function () {
+            updateListener({
+                id: 'update_1',
+                type: 'load',
+                data: {
+                    id: 'update_1',
+                    name: 'Created elsewhere',
+                    description: 'New Workspace from update listener'
+                }
+            });
+        }, 2500);
 
-        return workspaces;
+        deferred.resolve(data);
+
+        return deferred.promise;
     };
 
-    this.createWorkspace = function (data, otherWorkspaceId) {
-        var key,
-            newWorkspace = itemGenerator();
+    this.watchNumberOfComponents = function (parentContext, workspaceId, updateListener) {
+        var deferred = $q.defer();
+        $timeout(function () {
+            updateListener({id: '/1/1', type: 'unload', data: self.chance.integer({min: 0, max: 175})});
+        }, 5000);
+        deferred.resolve({
+            regionId: workspaceId,
+            count: self.chance.integer({min: 0, max: 175})
+        });
+        return deferred.promise;
+    };
 
-        // TODO: if other workspace is defined then copy it and update with data
-        for (key in data) {
-            if (data.hasOwnProperty(key)) {
-                newWorkspace[key] = data[key];
-            }
+    this.watchNumberOfDesigns = function (parentContext, workspaceId, updateListener) {
+        var deferred = $q.defer();
+        $timeout(function () {
+            updateListener({id: '/1/1', type: 'unload', data: self.chance.integer({min: 0, max: 15})});
+        }, 7000);
+        deferred.resolve({
+            regionId: workspaceId,
+            count: self.chance.integer({min: 0, max: 15})
+        });
+        return deferred.promise;
+    };
+
+    this.watchNumberOfTestBenches = function (parentContext, workspaceId, updateListener) {
+        var deferred = $q.defer();
+        $timeout(function () {
+            updateListener({id: '/1/1', type: 'unload', data: self.chance.integer({min: 0, max: 10})});
+        }, 3000);
+        deferred.resolve({
+            regionId: workspaceId,
+            count: self.chance.integer({min: 0, max: 10})
+        });
+        return deferred.promise;
+    };
+
+    this.cleanUpRegion = function (parentContext, regionId) {
+        console.log('cleanUpRegion');
+    };
+
+    this.cleanUpAllRegions = function (parentContext) {
+        console.log('cleanUpAllRegions');
+    };
+
+    this.registerWatcher = function (parentContext, fn) {
+        fn(false);
+    };
+});
+
+demoApp.service('FileService', function ($q) {
+    this.saveDroppedFiles = function (files, validExtensions) {
+        var deferred = $q.defer(),
+            addedFiles = [],
+            i;
+        for (i = 0; i < files.length; i += 1) {
+            addedFiles.push({
+                hash: '',
+                name: files[i].name,
+                type: 'zip',
+                size: files[i].size,
+                url: ''
+            });
         }
 
-        workspaces.push(newWorkspace);
+        deferred.resolve(addedFiles);
+
+        return deferred.promise;
     };
-
-    this.deleteWorkspace = function (id) {
-        var index = workspaces.map(function (e) {
-            return e.id;
-        }).indexOf(id);
-        if (index > -1) {
-            workspaces.splice(index, 1);
-        }
-    };
-
-
 });
