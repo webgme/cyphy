@@ -38,7 +38,7 @@ angular.module( 'CyPhyApp', [
             console.error( reason );
         } );
     } )
-    .controller( 'TestController', function ( $scope, branchService ) {
+    .controller( 'TestController', function ( $scope, branchService, nodeService ) {
         'use strict';
         $scope.data = {
             branchName: 'master'
@@ -46,6 +46,14 @@ angular.module( 'CyPhyApp', [
         console.log( 'TestController' );
 
         $scope.switchBranch = function () {
-            console.log($scope.data.branchName);
+            //nodeService.logContext()
+            branchService.selectBranch('my-db-connection-id', $scope.data.branchName)
+                .then(function(id) {
+                    console.log('branch selected', id);
+                })
+                .catch(function(err) {
+                    console.error(err);
+                    window.alert('"' + $scope.data.branchName + '" does not exist!');
+                });
         };
     } );
