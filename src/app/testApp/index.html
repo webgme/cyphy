@@ -25,10 +25,14 @@
     <h1 class="main-view-header">Workspaces</h1>
     <input type="text" class="form-control" data-ng-model="data.branchName">
     <button class="btn btn-primary" ng-click="switchBranch()">Switch Branch</button>
+    <input type="checkbox" ng-model="data.extra">
     <div class="workspaces col-lg-12">
         <workspace-list data-connection-id="'my-db-connection-id'"></workspace-list>
     </div>
+
+    <workspace-list ng-if="data.extra" workspace-list data-connection-id="'my-db-connection-id'"></workspace-list>
 </div>
+
 <!-- Include application and templates-->
 <script src="<%= appFilePath %>"></script>
 <!--<script src="<%= templateFilePath %>"></script>-->

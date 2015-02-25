@@ -41,7 +41,8 @@ angular.module( 'CyPhyApp', [
     .controller( 'TestController', function ( $scope, branchService, nodeService ) {
         'use strict';
         $scope.data = {
-            branchName: 'master'
+            branchName: 'master',
+            extra: false
         };
         console.log( 'TestController' );
 
