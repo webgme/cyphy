@@ -1,8 +1,6 @@
 /*globals define, GME, WebGMEGlobal */
 define('webcyphy.plugins',
-    [
-        'xmljsonconverter',
-        'executor/ExecutorClient',
+    [   'xmljsonconverter',
         'plugin/AcmImporter/AcmImporter/AcmImporter',
         'plugin/AdmImporter/AdmImporter/AdmImporter',
         'plugin/AtmImporter/AtmImporter/AtmImporter',
@@ -12,7 +10,6 @@ define('webcyphy.plugins',
         'plugin/GenerateDashboard/GenerateDashboard/GenerateDashboard',
         'plugin/SaveDesertConfigurations/SaveDesertConfigurations/SaveDesertConfigurations'
     ], function (Converters,
-                 ExecutorClient,
                  AcmImporter,
                  AdmImporter,
                  AtmImporter,
@@ -23,7 +20,6 @@ define('webcyphy.plugins',
                  SaveDesertConfigurations) {
         'use strict';
         GME.classes = GME.classes || {};
-        GME.classes.ExecutorClient = ExecutorClient;
         GME.classes.Converters = Converters;
 
         WebGMEGlobal.plugins = WebGMEGlobal.plugins || {};

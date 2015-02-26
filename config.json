@@ -6,6 +6,8 @@
     "mongodatabase": "CyPhy",
 
     "debug": false,
+    
+    "enableExecutor": true,
 
     "decoratorpaths": ["./src/decorators"],
 
@@ -17,7 +19,6 @@
     ],
 
     "rextrast": {
-        "executor": "./node_modules/webgme/src/middleware/executor/Executor",
         "desert": "./src/rest/desert/Desert",
         "serverinfo": "./src/rest/serverInfo/ServerInfo"
     },
