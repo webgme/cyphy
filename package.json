@@ -67,7 +67,7 @@
     "showdown": "Showdown"
   },
   "engines": {
-    "node": ">=0.10.0"
+    "node": ">=6.17.1"
   },
   "config": {},
   "scripts": {

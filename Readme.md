@@ -9,7 +9,7 @@
 3. Clone this [webgme-cyphy repository](https://github.com/webgme/webgme-cyphy), and change to that directory on your machine
 4. Install dependencies listed in [package.json](https://github.com/webgme/webgme-cyphy/blob/master/package.json)
  - From command line: `npm install`
- - [`install_script.cmd`](https://github.com/webgme/webgme-cyphy/blob/master/install_script.cmd) will also install the dependencies
+ - [`install_script.cmd`](https://github.com/webgme/webgme-cyphy/blob/master/install_script.cmd) will also install the dependencies. (2023 note: this might give errors but try starting the server anyhow - some error don't matter.)
 5. Add dashboard files to the blob. 
  - Run [`add_dashboard.cmd`](https://github.com/webgme/webgme-cyphy/blob/master/add_dashboard.cmd)
  - From command line: `node add_dir_to_blob.js blob-resources/dashboard`
@@ -24,14 +24,16 @@ For more details, consult the [documentation](https://github.com/webgme/webgme-c
 
 ## 2 ways to visualize models using WebCyPhy ##
 ### Option A ###
-__This interface is under development__. Visit [localhost:8855/extlib/src/app/default/](http://localhost:8855/extlib/src/app/default/) to open the domain-specific WebCyPhy UI. This option requires that the 'ADMEditor' language exists in the database (if not it will link you to Option 1). This application reads and writes to and from the master branch.
-
-### Option B ###
 Visit [localhost:8855](http://localhost:8855) to open the default WebGME editor
 - Click on the first icon in the toolbar `Projects`
 - Create new project from file
 - Name the project `ADMEditor`
 - Select the `meta/ADMEditor_metaOnly.json` file - you can browse and select the file or drag-and-drop it to the dialogue box
+- Create a `WorkSpace` node in the root and add an `ACMFolder`, `ADMFolder`.
+- From each folder respectively run the `ACMImporter`- and `ADMImporter`-plugins. For the ACMs, drag and drop all the zip files from `/meta/drivetrain-model/Components` onto the dropbox. For the ADM select the `/meta/drivetrain-model/FullSystem.adm` file.
+
+### Option B ###
+__This interface is under development__. Visit [localhost:8855/extlib/src/app/default/](http://localhost:8855/extlib/src/app/default/) to open the domain-specific WebCyPhy UI. This option requires that the 'ADMEditor' language exists in the database (if not it will link you to Option 1). This application reads and writes to and from the master branch.
 
 # Notes #
 
